@@ -53,7 +53,7 @@ function findFieldColumns(row, fieldName) {
   const columns = [];
   row.forEach((cell, index) => {
     const value = String(cell ?? "").trim();
-    if (value === fieldName || value.includes(fieldName)) columns.push(index);
+    if (value === fieldName || value.includes(fieldName) || (fieldName === "その他特記すべき事項" && value.includes("その他"))) columns.push(index);
   });
   return columns;
 }
@@ -75,7 +75,7 @@ function getTextValue(row, fieldColumn, fieldName) {
   const values = [];
   for (let index = fieldColumn + 1; index < row.length; index++) {
     const value = String(row[index] ?? "").trim();
-    if (!value || isCheckbox(value) || isPlaceholderText(value)) continue;
+    if (!value || isCheckbox(value) || isPlaceholderText(value) || (fieldName === "その他特記すべき事項" && value === "特記すべき事項")) continue;
     if (isKnownFieldLabel(value, fieldName)) break;
     values.push(value);
   }
@@ -109,7 +109,10 @@ function isKnownFieldLabel(value, currentFieldName) {
   const allFields = [...selectionFields, ...textFields];
   return allFields.some((fieldName) => fieldName !== currentFieldName && value === fieldName);
 }
-function normalizeFieldName(fieldName) { return fieldName.replace(/[：:]+$/g, "").trim(); }
+function normalizeFieldName(fieldName) {
+  if (fieldName === "その他特記すべき事項") return "その他";
+  return fieldName.replace(/[：:]+$/g, "").trim();
+}
 
 function renderSelectedFields(container, items) {
   if (items.length === 0) { container.textContent = "選択された項目は見つかりませんでした。"; return; }
