@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>事故報告書AI</title>
+</head>
+<body>
+  <main>
+    <h1>事故報告書AI</h1>
+    <p>まずはD1への保存テストを行います。</p>
+
+    <form id="reportForm">
+      <label>提出日<br><input name="submission_date" type="date" required></label><br><br>
+      <label>第○報<br><input name="report_number" value="第1報" required></label><br><br>
+      <label>氏名<br><input name="person_name" required></label><br><br>
+      <label>発生場所<br><input name="occurrence_location" required></label><br><br>
+      <label>事故状況の程度<br><input name="severity" required></label><br><br>
+      <label>原因分析<br><textarea name="cause_analysis" required></textarea></label><br><br>
+      <label>再発防止策<br><textarea name="recurrence_prevention" required></textarea></label><br><br>
+      <button type="submit">D1へ保存</button>
+    </form>
+
+    <p id="result"></p>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>
