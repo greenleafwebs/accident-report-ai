@@ -23,7 +23,6 @@ const selectionFields = [
 ];
 
 // Excel帳票で読み取りたい「自由記入・入力式の項目名」。
-// 項目名を起点に右側の入力値を取得する。
 const textFields = [
   "氏名",
   "発生日時",
@@ -87,12 +86,14 @@ readExcel.addEventListener("click", async () => {
           }
         }
 
-        // 自由記入：項目名と同じ行の右側にある入力値を取得
+        // 自由記入：通常は同じ行の右側、原因分析・再発防止策は複数行の入力欄を取得
         for (const fieldName of textFields) {
           const fieldColumns = findFieldColumns(row, fieldName);
 
           for (const fieldColumn of fieldColumns) {
-            const value = getTextValue(row, fieldColumn, fieldName);
+            const value = isMultiRowTextField(fieldName)
+              ? getMultiRowTextValue(rows, rowIndex, fieldColumn, fieldName)
+              : getTextValue(row, fieldColumn, fieldName);
 
             if (value) {
               texts.push({
@@ -157,12 +158,11 @@ function getCheckedValues(row, fieldColumn) {
 function getTextValue(row, fieldColumn, fieldName) {
   const values = [];
 
-  // 項目名そのものを値として扱わない。
-  // 右側の空白・チェック記号を除き、入力されたセルを集める。
   for (let index = fieldColumn + 1; index < row.length; index++) {
     const value = String(row[index] ?? "").trim();
     if (!value) continue;
     if (isCheckbox(value)) continue;
+    if (isPlaceholderText(value)) continue;
 
     // 別の主要項目名に到達したら、そこで終了する。
     if (isKnownFieldLabel(value, fieldName)) break;
@@ -170,7 +170,52 @@ function getTextValue(row, fieldColumn, fieldName) {
     values.push(value);
   }
 
-  return [...new Set(values)].join(" ").trim();
+  return cleanTextValues(values, fieldName);
+}
+
+// 「原因分析」「再発防止策」は、項目名の次の行に入力欄があるため、
+// 項目名の行だけでなく、その後の数行も確認する。
+function isMultiRowTextField(fieldName) {
+  return fieldName === "原因分析" || fieldName === "再発防止策";
+}
+
+function getMultiRowTextValue(rows, startRow, fieldColumn, fieldName) {
+  const values = [];
+  const maxRows = Math.min(rows.length, startRow + 3);
+
+  for (let rowIndex = startRow; rowIndex < maxRows; rowIndex++) {
+    const row = rows[rowIndex];
+
+    for (let index = fieldColumn + 1; index < row.length; index++) {
+      const value = String(row[index] ?? "").trim();
+      if (!value) continue;
+      if (isCheckbox(value)) continue;
+      if (isPlaceholderText(value)) continue;
+
+      // 次の主要項目が始まったら、この入力欄は終了。
+      if (rowIndex > startRow && isKnownFieldLabel(value, fieldName)) {
+        return cleanTextValues(values, fieldName);
+      }
+
+      values.push(value);
+    }
+  }
+
+  return cleanTextValues(values, fieldName);
+}
+
+function isPlaceholderText(value) {
+  return value.includes("できるだけ具体的に記載すること");
+}
+
+function cleanTextValues(values, fieldName) {
+  const cleaned = values
+    .map((value) => value.replace(/\s+/g, " ").trim())
+    .filter(Boolean)
+    .filter((value) => value !== fieldName)
+    .filter((value) => !isPlaceholderText(value));
+
+  return [...new Set(cleaned)].join(" ").trim();
 }
 
 function isCheckbox(value) {
