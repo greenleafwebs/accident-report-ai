@@ -6,7 +6,22 @@ const excelResult = document.getElementById("excelResult");
 const preview = document.getElementById("preview");
 const checkedItems = document.getElementById("checkedItems");
 const textItems = document.getElementById("textItems");
-const debugItems = document.getElementById("debugItems");
+
+// Excel帳票で読み取りたい「項目名」。
+// 項目名を起点に同じ行の■だけを調べるため、未選択の☐は拾わない。
+const selectionFields = [
+  "第○報",
+  "事故状況の程度",
+  "性別：",
+  "住所",
+  "要介護度",
+  "発生場所",
+  "事故の種別",
+  "受診方法",
+  "診断内容",
+  "続柄",
+  "連絡した関係機関 (連絡した場合のみ)"
+];
 
 readExcel.addEventListener("click", async () => {
   const file = excelFile.files[0];
@@ -19,16 +34,13 @@ readExcel.addEventListener("click", async () => {
   excelResult.textContent = "読み込み中…";
   checkedItems.innerHTML = "";
   textItems.innerHTML = "";
-  debugItems.innerHTML = "";
   preview.hidden = true;
 
   try {
     const buffer = await file.arrayBuffer();
     const workbook = XLSX.read(buffer, { type: "array" });
-
-    const checked = [];
+    const selected = [];
     const texts = [];
-    const debug = [];
 
     for (const sheetName of workbook.SheetNames) {
       const sheet = workbook.Sheets[sheetName];
@@ -37,26 +49,32 @@ readExcel.addEventListener("click", async () => {
         defval: ""
       });
 
-      rows.forEach((row, rowIndex) => {
+      for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
+        const row = rows[rowIndex];
+
+        // 項目名を起点に、その行の選択結果を取得
+        for (const fieldName of selectionFields) {
+          const fieldColumns = findFieldColumns(row, fieldName);
+
+          for (const fieldColumn of fieldColumns) {
+            const values = getCheckedValues(row, fieldColumn);
+
+            values.forEach((value) => {
+              selected.push({
+                field: fieldName,
+                value,
+                sheet: sheetName,
+                row: rowIndex + 1
+              });
+            });
+          }
+        }
+
+        // 自由記入欄などの値は今まで通り確認用に保持
         row.forEach((cell, colIndex) => {
           const value = String(cell ?? "").trim();
-
           if (!value) return;
 
-          // 選択欄：■の右隣セルを取得
-          if (value.includes("■")) {
-            const right = String(row[colIndex + 1] ?? "").trim();
-            if (right) {
-              checked.push({
-                sheet: sheetName,
-                row: rowIndex + 1,
-                column: colIndex + 1,
-                value: right
-              });
-            }
-          }
-
-          // 自由記入欄などの値も確認できるように保持
           if (!/[□■☐☑]/.test(value) && value.length >= 2) {
             texts.push({
               sheet: sheetName,
@@ -65,41 +83,12 @@ readExcel.addEventListener("click", async () => {
               value
             });
           }
-
-          // 調査用：チェック記号を含むセルと、その周辺セルを保存
-          if (/[□■☐☑]/.test(value)) {
-            debug.push({
-              type: "checkbox",
-              sheet: sheetName,
-              row: rowIndex + 1,
-              column: colIndex + 1,
-              value,
-              left: String(row[colIndex - 1] ?? "").trim(),
-              right: String(row[colIndex + 1] ?? "").trim(),
-              above: String(rows[rowIndex - 1]?.[colIndex] ?? "").trim(),
-              below: String(rows[rowIndex + 1]?.[colIndex] ?? "").trim()
-            });
-          }
-
-          // 調査用：「事故状況の程度」が含まれる行を丸ごと確認
-          if (value.includes("事故状況の程度")) {
-            debug.push({
-              type: "severity-row",
-              sheet: sheetName,
-              row: rowIndex + 1,
-              cells: row.map((item, index) => ({
-                column: index + 1,
-                value: String(item ?? "").trim()
-              })).filter((item) => item.value)
-            });
-          }
         });
-      });
+      }
     }
 
-    renderList(checkedItems, checked, "選択なし");
+    renderSelectedFields(checkedItems, selected);
     renderList(textItems, texts, "入力内容なし");
-    renderDebug(debug);
 
     preview.hidden = false;
     excelResult.textContent = `読み込み完了：${workbook.SheetNames.length}シート`;
@@ -107,6 +96,67 @@ readExcel.addEventListener("click", async () => {
     excelResult.textContent = `読み込みエラー：${error.message}`;
   }
 });
+
+function findFieldColumns(row, fieldName) {
+  const columns = [];
+
+  row.forEach((cell, index) => {
+    const value = String(cell ?? "").trim();
+    if (value === fieldName || value.includes(fieldName)) {
+      columns.push(index);
+    }
+  });
+
+  return columns;
+}
+
+function getCheckedValues(row, fieldColumn) {
+  const values = [];
+
+  // 項目名より右側だけを調べる。
+  // 次の項目名らしきセルまでを対象にすることで、別項目の■を混ぜにくくする。
+  for (let index = fieldColumn + 1; index < row.length; index++) {
+    const value = String(row[index] ?? "").trim();
+    if (!value) continue;
+
+    // ■があれば「その右隣」を選択値として取得
+    if (value.includes("■")) {
+      const right = String(row[index + 1] ?? "").trim();
+      if (right && !right.includes("□") && !right.includes("■") && !right.includes("☐") && !right.includes("☑")) {
+        values.push(right);
+      }
+    }
+  }
+
+  return [...new Set(values)];
+}
+
+function renderSelectedFields(container, items) {
+  if (items.length === 0) {
+    container.textContent = "選択された項目は見つかりませんでした。";
+    return;
+  }
+
+  const grouped = new Map();
+
+  items.forEach((item) => {
+    if (!grouped.has(item.field)) {
+      grouped.set(item.field, []);
+    }
+    grouped.get(item.field).push(item);
+  });
+
+  const list = document.createElement("ul");
+
+  grouped.forEach((fieldItems, fieldName) => {
+    const li = document.createElement("li");
+    const values = [...new Set(fieldItems.map((item) => item.value))];
+    li.textContent = `${fieldName}：${values.join("、")}`;
+    list.appendChild(li);
+  });
+
+  container.appendChild(list);
+}
 
 function renderList(container, items, emptyText) {
   if (items.length === 0) {
@@ -123,51 +173,6 @@ function renderList(container, items, emptyText) {
   });
 
   container.appendChild(list);
-}
-
-function renderDebug(items) {
-  if (items.length === 0) {
-    debugItems.textContent = "調査対象のセルが見つかりませんでした。";
-    return;
-  }
-
-  items.forEach((item) => {
-    const section = document.createElement("div");
-    section.style.marginBottom = "1em";
-    section.style.padding = "0.75em";
-    section.style.border = "1px solid #ccc";
-
-    if (item.type === "checkbox") {
-      section.innerHTML = `
-        <strong>チェック記号セル</strong><br>
-        シート: ${escapeHtml(item.sheet)} / ${item.row}行 ${item.column}列<br>
-        セル自身: 「${escapeHtml(item.value)}」<br>
-        左: 「${escapeHtml(item.left)}」 / 右: 「${escapeHtml(item.right)}」<br>
-        上: 「${escapeHtml(item.above)}」 / 下: 「${escapeHtml(item.below)}」
-      `;
-    } else {
-      const cells = item.cells
-        .map((cell) => `${cell.column}列=「${escapeHtml(cell.value)}」`)
-        .join(" / ");
-
-      section.innerHTML = `
-        <strong>「事故状況の程度」を含む行</strong><br>
-        シート: ${escapeHtml(item.sheet)} / ${item.row}行<br>
-        ${cells || "値なし"}
-      `;
-    }
-
-    debugItems.appendChild(section);
-  });
-}
-
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
 }
 
 form.addEventListener("submit", async (event) => {
