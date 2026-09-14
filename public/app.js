@@ -87,7 +87,6 @@ function isMultiRowTextField(fieldName) {
 }
 
 function getMultiRowTextValue(rows, startRow, fieldColumn, fieldName) {
-  // 項目名の直後の入力行だけを対象にし、後続の「その他特記すべき事項」などを混ぜない。
   for (let rowIndex = startRow + 1; rowIndex < Math.min(rows.length, startRow + 3); rowIndex++) {
     const row = rows[rowIndex];
     for (let index = fieldColumn + 1; index < row.length; index++) {
