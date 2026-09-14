@@ -53,6 +53,12 @@ function findFieldColumns(row, fieldName) {
   const columns = [];
   row.forEach((cell, index) => {
     const value = String(cell ?? "").trim();
+    const normalized = value.replace(/\s+/g, "");
+    if (fieldName === "その他") {
+      // 実際の帳票では「9 その他\n特記すべき事項」と1セルに入っているため、ここだけ専用判定する。
+      if (/^9その他(?:特記すべき事項)?$/.test(normalized)) columns.push(index);
+      return;
+    }
     if (value === fieldName || value.includes(fieldName)) columns.push(index);
   });
   return columns;
