@@ -4,24 +4,45 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>事故報告書AI</title>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 </head>
 <body>
   <main>
     <h1>事故報告書AI</h1>
-    <p>まずはD1への保存テストを行います。</p>
+    <p>まずはExcelの読み取りテストを行います。</p>
 
-    <form id="reportForm">
-      <label>提出日<br><input name="submission_date" type="date" required></label><br><br>
-      <label>第○報<br><input name="report_number" value="第1報" required></label><br><br>
-      <label>氏名<br><input name="person_name" required></label><br><br>
-      <label>発生場所<br><input name="occurrence_location" required></label><br><br>
-      <label>事故状況の程度<br><input name="severity" required></label><br><br>
-      <label>原因分析<br><textarea name="cause_analysis" required></textarea></label><br><br>
-      <label>再発防止策<br><textarea name="recurrence_prevention" required></textarea></label><br><br>
-      <button type="submit">D1へ保存</button>
-    </form>
+    <section>
+      <h2>① Excelを選択</h2>
+      <input id="excelFile" type="file" accept=".xlsx,.xls">
+      <button id="readExcel" type="button">Excelを読み込む</button>
+      <p id="excelResult"></p>
+    </section>
 
-    <p id="result"></p>
+    <section id="preview" hidden>
+      <h2>② 読み取り結果</h2>
+      <h3>■で選択されている項目</h3>
+      <div id="checkedItems"></div>
+
+      <h3>入力されている主な内容</h3>
+      <div id="textItems"></div>
+    </section>
+
+    <hr>
+
+    <section>
+      <h2>③ D1保存テスト（従来機能）</h2>
+      <form id="reportForm">
+        <label>提出日<br><input name="submission_date" type="date" required></label><br><br>
+        <label>第○報<br><input name="report_number" value="第1報" required></label><br><br>
+        <label>氏名<br><input name="person_name" required></label><br><br>
+        <label>発生場所<br><input name="occurrence_location" required></label><br><br>
+        <label>事故状況の程度<br><input name="severity" required></label><br><br>
+        <label>原因分析<br><textarea name="cause_analysis" required></textarea></label><br><br>
+        <label>再発防止策<br><textarea name="recurrence_prevention" required></textarea></label><br><br>
+        <button type="submit">D1へ保存</button>
+      </form>
+      <p id="result"></p>
+    </section>
   </main>
 
   <script src="/app.js"></script>
