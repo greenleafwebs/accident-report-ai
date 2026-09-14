@@ -7,8 +7,7 @@ const preview = document.getElementById("preview");
 const checkedItems = document.getElementById("checkedItems");
 const textItems = document.getElementById("textItems");
 
-// Excel帳票で読み取りたい「項目名」。
-// 項目名を起点に同じ行の■だけを調べるため、未選択の☐は拾わない。
+// Excel帳票で読み取りたい「選択式の項目名」。
 const selectionFields = [
   "第○報",
   "事故状況の程度",
@@ -21,6 +20,24 @@ const selectionFields = [
   "診断内容",
   "続柄",
   "連絡した関係機関 (連絡した場合のみ)"
+];
+
+// Excel帳票で読み取りたい「自由記入・入力式の項目名」。
+// 項目名を起点に右側の入力値を取得する。
+const textFields = [
+  "氏名",
+  "発生日時",
+  "発生時状況、事故内容の詳細",
+  "発生時の対応",
+  "医療機関名",
+  "連絡先（電話番号）",
+  "診断名",
+  "検査、処置等の概要",
+  "利用者の状況",
+  "本人、家族、関係先等への追加対応予定",
+  "原因分析",
+  "再発防止策",
+  "その他特記すべき事項"
 ];
 
 readExcel.addEventListener("click", async () => {
@@ -52,7 +69,7 @@ readExcel.addEventListener("click", async () => {
       for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
         const row = rows[rowIndex];
 
-        // 項目名を起点に、その行の選択結果を取得
+        // 選択式：項目名を起点に、その行の■だけを取得
         for (const fieldName of selectionFields) {
           const fieldColumns = findFieldColumns(row, fieldName);
 
@@ -70,25 +87,28 @@ readExcel.addEventListener("click", async () => {
           }
         }
 
-        // 自由記入欄などの値は今まで通り確認用に保持
-        row.forEach((cell, colIndex) => {
-          const value = String(cell ?? "").trim();
-          if (!value) return;
+        // 自由記入：項目名と同じ行の右側にある入力値を取得
+        for (const fieldName of textFields) {
+          const fieldColumns = findFieldColumns(row, fieldName);
 
-          if (!/[□■☐☑]/.test(value) && value.length >= 2) {
-            texts.push({
-              sheet: sheetName,
-              row: rowIndex + 1,
-              column: colIndex + 1,
-              value
-            });
+          for (const fieldColumn of fieldColumns) {
+            const value = getTextValue(row, fieldColumn, fieldName);
+
+            if (value) {
+              texts.push({
+                field: fieldName,
+                value,
+                sheet: sheetName,
+                row: rowIndex + 1
+              });
+            }
           }
-        });
+        }
       }
     }
 
     renderSelectedFields(checkedItems, selected);
-    renderList(textItems, texts, "入力内容なし");
+    renderTextFields(textItems, texts);
 
     preview.hidden = false;
     excelResult.textContent = `読み込み完了：${workbook.SheetNames.length}シート`;
@@ -113,22 +133,59 @@ function findFieldColumns(row, fieldName) {
 function getCheckedValues(row, fieldColumn) {
   const values = [];
 
-  // 項目名より右側だけを調べる。
-  // 次の項目名らしきセルまでを対象にすることで、別項目の■を混ぜにくくする。
   for (let index = fieldColumn + 1; index < row.length; index++) {
     const value = String(row[index] ?? "").trim();
     if (!value) continue;
 
-    // ■があれば「その右隣」を選択値として取得
     if (value.includes("■")) {
       const right = String(row[index + 1] ?? "").trim();
-      if (right && !right.includes("□") && !right.includes("■") && !right.includes("☐") && !right.includes("☑")) {
+      if (
+        right &&
+        !right.includes("□") &&
+        !right.includes("■") &&
+        !right.includes("☐") &&
+        !right.includes("☑")
+      ) {
         values.push(right);
       }
     }
   }
 
   return [...new Set(values)];
+}
+
+function getTextValue(row, fieldColumn, fieldName) {
+  const values = [];
+
+  // 項目名そのものを値として扱わない。
+  // 右側の空白・チェック記号を除き、入力されたセルを集める。
+  for (let index = fieldColumn + 1; index < row.length; index++) {
+    const value = String(row[index] ?? "").trim();
+    if (!value) continue;
+    if (isCheckbox(value)) continue;
+
+    // 別の主要項目名に到達したら、そこで終了する。
+    if (isKnownFieldLabel(value, fieldName)) break;
+
+    values.push(value);
+  }
+
+  return [...new Set(values)].join(" ").trim();
+}
+
+function isCheckbox(value) {
+  return /^[□■☐☑]+$/.test(value);
+}
+
+function isKnownFieldLabel(value, currentFieldName) {
+  const allFields = [...selectionFields, ...textFields];
+  return allFields.some((fieldName) =>
+    fieldName !== currentFieldName && value === fieldName
+  );
+}
+
+function normalizeFieldName(fieldName) {
+  return fieldName.replace(/[：:]+$/g, "").trim();
 }
 
 function renderSelectedFields(container, items) {
@@ -151,24 +208,33 @@ function renderSelectedFields(container, items) {
   grouped.forEach((fieldItems, fieldName) => {
     const li = document.createElement("li");
     const values = [...new Set(fieldItems.map((item) => item.value))];
-    li.textContent = `${fieldName}：${values.join("、")}`;
+    li.textContent = `${normalizeFieldName(fieldName)}：${values.join("、")}`;
     list.appendChild(li);
   });
 
   container.appendChild(list);
 }
 
-function renderList(container, items, emptyText) {
+function renderTextFields(container, items) {
   if (items.length === 0) {
-    container.textContent = emptyText;
+    container.textContent = "自由記入欄は見つかりませんでした。";
     return;
   }
 
-  const list = document.createElement("ul");
+  const grouped = new Map();
 
   items.forEach((item) => {
+    if (!grouped.has(item.field)) {
+      grouped.set(item.field, []);
+    }
+    grouped.get(item.field).push(item.value);
+  });
+
+  const list = document.createElement("ul");
+
+  grouped.forEach((values, fieldName) => {
     const li = document.createElement("li");
-    li.textContent = `${item.value} （${item.sheet} / ${item.row}行 ${item.column}列）`;
+    li.textContent = `${normalizeFieldName(fieldName)}：${[...new Set(values)].join(" / ")}`;
     list.appendChild(li);
   });
 
