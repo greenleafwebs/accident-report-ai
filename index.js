@@ -38,8 +38,27 @@ export default {
           "本人、家族、関係先等への追加対応予定"
         ]);
 
-        const safeSelected = selected.filter((item) => !excludedFields.has(item.field));
-        const safeTexts = texts.filter((item) => !excludedFields.has(item.field));
+        const sensitiveValues = texts
+          .filter((item) => item.field === "氏名")
+          .map((item) => String(item.value || "").trim())
+          .filter(Boolean);
+
+        const sanitizeValue = (value) => {
+          let sanitized = String(value || "");
+          for (const sensitiveValue of sensitiveValues) {
+            sanitized = sanitized.split(sensitiveValue).join("[個人名]");
+          }
+          // 電話番号らしき文字列もAIへ送らない。
+          sanitized = sanitized.replace(/(?:0\d{1,4}[-ー]?\d{1,4}[-ー]?\d{3,4})/g, "[電話番号]");
+          return sanitized;
+        };
+
+        const safeSelected = selected
+          .filter((item) => !excludedFields.has(item.field))
+          .map((item) => ({ ...item, value: sanitizeValue(item.value) }));
+        const safeTexts = texts
+          .filter((item) => !excludedFields.has(item.field))
+          .map((item) => ({ ...item, value: sanitizeValue(item.value) }));
 
         const reportText = [
           "【AIチェック対象：選択された項目】",
