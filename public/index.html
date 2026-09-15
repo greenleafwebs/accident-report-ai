@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>事故報告書AI ver.0.1.15</title>
+  <title>事故報告書AI ver.0.1.16</title>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   <style>
     #privacyNotice {
@@ -15,7 +15,13 @@
     }
     #excelFile {
       display: block;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
+    }
+    #fileName {
+      margin: 0 0 8px;
+      white-space: normal;
+      overflow-wrap: anywhere;
+      word-break: break-all;
     }
     #aiResult {
       white-space: pre-line;
@@ -25,7 +31,7 @@
 </head>
 <body>
   <main>
-    <h1>事故報告書AI ver.0.1.15</h1>
+    <h1>事故報告書AI ver.0.1.16</h1>
     <p>Excelを読み込み、AIが確認したほうがよい点を整理します。</p>
 
     <div id="privacyNotice">
@@ -38,6 +44,7 @@
     <section>
       <h2>① Excelを選択</h2>
       <input id="excelFile" type="file" accept=".xlsx,.xls">
+      <p id="fileName">ファイルが選択されていません。</p>
       <button id="readExcel" type="button">Excelを読み込む</button>
       <p id="excelResult"></p>
     </section>
@@ -59,6 +66,6 @@
     </section>
   </main>
 
-  <script src="/app.js?v=20260915-15"></script>
+  <script src="/app.js?v=20260915-16"></script>
 </body>
 </html>
