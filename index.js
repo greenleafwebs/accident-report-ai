@@ -26,12 +26,27 @@ export default {
           );
         }
 
+        // AIには直接の個人識別情報や健康情報を送らない。
+        // ブラウザ側だけでなくWorker側でも除外して、送信前に二重チェックする。
+        const excludedFields = new Set([
+          "氏名",
+          "住所",
+          "連絡先（電話番号）",
+          "医療機関名",
+          "診断名",
+          "利用者の状況",
+          "本人、家族、関係先等への追加対応予定"
+        ]);
+
+        const safeSelected = selected.filter((item) => !excludedFields.has(item.field));
+        const safeTexts = texts.filter((item) => !excludedFields.has(item.field));
+
         const reportText = [
-          "【選択された項目】",
-          ...selected.map((item) => `- ${item.field}: ${item.value}`),
+          "【AIチェック対象：選択された項目】",
+          ...safeSelected.map((item) => `- ${item.field}: ${item.value}`),
           "",
-          "【自由記入欄】",
-          ...texts.map((item) => `- ${item.field}: ${item.value}`)
+          "【AIチェック対象：自由記入欄】",
+          ...safeTexts.map((item) => `- ${item.field}: ${item.value}`)
         ].join("\n");
 
         const prompt = `あなたは介護施設の事故報告書を確認する補助AIです。
@@ -39,6 +54,8 @@ export default {
 あなたの役割は「問いかけ・整理・見落としチェック」です。
 原因分析や再発防止策を勝手に作成・決定してはいけません。
 職員や管理者が判断するための確認材料だけを示してください。
+
+個人情報保護のため、氏名、住所、電話番号、医療機関名、診断名、利用者の健康状態などの個人を特定できる情報はAIチェック対象から除外しています。
 
 次の事故報告書について、以下の観点で確認してください。
 1. 重要な情報が不足していないか
