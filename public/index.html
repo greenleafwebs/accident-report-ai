@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>事故報告書AI ver.0.1.17</title>
+  <title>事故報告書AI ver.0.1.18</title>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   <style>
     #privacyNotice {
@@ -36,14 +36,13 @@
 </head>
 <body>
   <main>
-    <h1>事故報告書AI ver.0.1.17</h1>
+    <h1>事故報告書AI ver.0.1.18</h1>
     <p>Excelを読み込み、AIが確認したほうがよい点を整理します。</p>
 
     <div id="privacyNotice">
       <strong>🔒 個人情報について</strong>
-      <p>■AIチェックでは、氏名・住所・電話番号・医療機関名・診断名・利用者の健康状態などを<br>　Geminiへ送信しないようにしています。</p>
-      <p>■自由記入欄に含まれる個人名や電話番号も、送信前にマスキングします。</p>
-      <p>■ExcelファイルそのものをGeminiへアップロードすることはありません。<br>　AIチェックには、必要な項目だけを整理して送信します。</p>
+      <p>■個人を直接特定できる情報（氏名・住所・電話番号）はGeminiへ送信しません。</p>
+      <p>■医療機関名・診断名・事故後の健康状態など、事故内容の確認に必要な情報はAIチェックに使用します。</p>
     </div>
 
     <section>
@@ -72,6 +71,6 @@
     </section>
   </main>
 
-  <script src="/app.js?v=20260915-17"></script>
+  <script src="/app.js?v=20260915-18"></script>
 </body>
 </html>
