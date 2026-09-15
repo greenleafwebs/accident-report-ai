@@ -12,7 +12,7 @@ const aiResult = document.getElementById("aiResult");
 const selectionFields = ["第○報","事故状況の程度","性別：","住所","要介護度","発生場所","事故の種別","受診方法","診断内容","続柄","連絡した関係機関 (連絡した場合のみ)"];
 const textFields = ["氏名","発生日時","発生時状況、事故内容の詳細","発生時の対応","医療機関名","連絡先（電話番号）","診断名","検査、処置等の概要","利用者の状況","本人、家族、関係先等への追加対応予定","原因分析","再発防止策","その他"];
 
-// Geminiへ送らない項目。Worker側でも同じ除外を行うため、二重で保護する。
+// Geminiへ送らない項目。画面の読み取り結果にも表示しない。Worker側でも同じ除外を行うため、二重で保護する。
 const aiExcludedFields = new Set([
   "氏名",
   "住所",
@@ -138,9 +138,10 @@ function isKnownFieldLabel(value, currentFieldName) {
 function normalizeFieldName(fieldName) { return fieldName.replace(/[：:]+$/g, "").trim(); }
 
 function renderSelectedFields(container, items) {
-  if (items.length === 0) { container.textContent = "選択された項目は見つかりませんでした。"; return; }
+  const visibleItems = items.filter((item) => !aiExcludedFields.has(item.field));
+  if (visibleItems.length === 0) { container.textContent = "表示できる項目は見つかりませんでした。"; return; }
   const grouped = new Map();
-  items.forEach((item) => {
+  visibleItems.forEach((item) => {
     if (!grouped.has(item.field)) grouped.set(item.field, []);
     grouped.get(item.field).push(item);
   });
@@ -155,9 +156,10 @@ function renderSelectedFields(container, items) {
 }
 
 function renderTextFields(container, items) {
-  if (items.length === 0) { container.textContent = "自由記入欄は見つかりませんでした。"; return; }
+  const visibleItems = items.filter((item) => !aiExcludedFields.has(item.field));
+  if (visibleItems.length === 0) { container.textContent = "表示できる内容は見つかりませんでした。"; return; }
   const grouped = new Map();
-  items.forEach((item) => {
+  visibleItems.forEach((item) => {
     if (!grouped.has(item.field)) grouped.set(item.field, []);
     grouped.get(item.field).push(item.value);
   });
