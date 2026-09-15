@@ -6,9 +6,14 @@ const excelResult = document.getElementById("excelResult");
 const preview = document.getElementById("preview");
 const checkedItems = document.getElementById("checkedItems");
 const textItems = document.getElementById("textItems");
+const aiCheck = document.getElementById("aiCheck");
+const aiResult = document.getElementById("aiResult");
 
 const selectionFields = ["第○報","事故状況の程度","性別：","住所","要介護度","発生場所","事故の種別","受診方法","診断内容","続柄","連絡した関係機関 (連絡した場合のみ)"];
 const textFields = ["氏名","発生日時","発生時状況、事故内容の詳細","発生時の対応","医療機関名","連絡先（電話番号）","診断名","検査、処置等の概要","利用者の状況","本人、家族、関係先等への追加対応予定","原因分析","再発防止策","その他"];
+
+let latestSelected = [];
+let latestTexts = [];
 
 readExcel.addEventListener("click", async () => {
   const file = excelFile.files[0];
@@ -16,6 +21,8 @@ readExcel.addEventListener("click", async () => {
   excelResult.textContent = "読み込み中…";
   checkedItems.innerHTML = "";
   textItems.innerHTML = "";
+  aiResult.textContent = "";
+  aiCheck.disabled = true;
   preview.hidden = true;
   try {
     const buffer = await file.arrayBuffer();
@@ -40,9 +47,12 @@ readExcel.addEventListener("click", async () => {
         }
       }
     }
+    latestSelected = selected;
+    latestTexts = texts;
     renderSelectedFields(checkedItems, selected);
     renderTextFields(textItems, texts);
     preview.hidden = false;
+    aiCheck.disabled = selected.length === 0 && texts.length === 0;
     excelResult.textContent = `読み込み完了：${workbook.SheetNames.length}シート`;
   } catch (error) {
     excelResult.textContent = `読み込みエラー：${error.message}`;
@@ -55,7 +65,6 @@ function findFieldColumns(row, fieldName) {
     const value = String(cell ?? "").trim();
     const normalized = value.replace(/\s+/g, "");
     if (fieldName === "その他") {
-      // 実際の帳票では「9 その他\n特記すべき事項」と1セルに入っているため、ここだけ専用判定する。
       if (/^9その他(?:特記すべき事項)?$/.test(normalized)) columns.push(index);
       return;
     }
@@ -120,7 +129,7 @@ function normalizeFieldName(fieldName) { return fieldName.replace(/[：:]+$/g, "
 function renderSelectedFields(container, items) {
   if (items.length === 0) { container.textContent = "選択された項目は見つかりませんでした。"; return; }
   const grouped = new Map();
-  items.forEach((item) => { if (!grouped.has(item.field)) grouped.set(item.field, []); grouped.get(item.field).push(item); });
+  items.forEach((item) => { if (!grouped.has(item.field)) grouped.set(item.field, []).push(item); grouped.get(item.field).push(item); });
   const list = document.createElement("ul");
   grouped.forEach((fieldItems, fieldName) => {
     const li = document.createElement("li");
@@ -134,7 +143,7 @@ function renderSelectedFields(container, items) {
 function renderTextFields(container, items) {
   if (items.length === 0) { container.textContent = "自由記入欄は見つかりませんでした。"; return; }
   const grouped = new Map();
-  items.forEach((item) => { if (!grouped.has(item.field)) grouped.set(item.field, []); grouped.get(item.field).push(item.value); });
+  items.forEach((item) => { if (!grouped.has(item.field)) grouped.set(item.field, []).push(item.value); });
   const list = document.createElement("ul");
   grouped.forEach((values, fieldName) => {
     const li = document.createElement("li");
@@ -143,6 +152,25 @@ function renderTextFields(container, items) {
   });
   container.appendChild(list);
 }
+
+aiCheck.addEventListener("click", async () => {
+  aiResult.textContent = "AIが確認中…";
+  aiCheck.disabled = true;
+  try {
+    const response = await fetch("/api/ai-check", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ selected: latestSelected, texts: latestTexts })
+    });
+    const body = await response.json();
+    if (!response.ok || !body.success) throw new Error(body.error || "AIチェックに失敗しました");
+    aiResult.textContent = body.text;
+  } catch (error) {
+    aiResult.textContent = `AIチェックエラー：${error.message}`;
+  } finally {
+    aiCheck.disabled = false;
+  }
+});
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
