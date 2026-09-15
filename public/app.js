@@ -129,7 +129,7 @@ function normalizeFieldName(fieldName) { return fieldName.replace(/[：:]+$/g, "
 function renderSelectedFields(container, items) {
   if (items.length === 0) { container.textContent = "選択された項目は見つかりませんでした。"; return; }
   const grouped = new Map();
-  items.forEach((item) => { if (!grouped.has(item.field)) grouped.set(item.field, []).push(item); grouped.get(item.field).push(item); });
+  items.forEach((item) => { if (!grouped.has(item.field)) grouped.set(item.field, []); grouped.get(item.field).push(item); });
   const list = document.createElement("ul");
   grouped.forEach((fieldItems, fieldName) => {
     const li = document.createElement("li");
