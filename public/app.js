@@ -97,10 +97,17 @@ function getCheckedValues(row, fieldColumn) {
     if (!value) continue;
     if (value.includes("■")) {
       const right = String(row[index + 1] ?? "").trim();
-      if (right && !right.includes("□") && !right.includes("■") && !right.includes("☐") && !right.includes("☑")) values.push(right);
+      if (right && !right.includes("□") && !right.includes("■") && !right.includes("☐") && !right.includes("☑")) {
+        // ■で選択されたセル内の改行は、AIへの入力時に意味を持たないため空白へ統一する。
+        values.push(normalizeSelectedValue(right));
+      }
     }
   }
   return [...new Set(values)];
+}
+
+function normalizeSelectedValue(value) {
+  return String(value ?? "").replace(/[\r\n]+/g, " ").replace(/\s+/g, " ").trim();
 }
 
 function getTextValue(row, fieldColumn, fieldName) {
