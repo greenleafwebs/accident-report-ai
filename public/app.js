@@ -171,6 +171,7 @@ aiCheck.addEventListener("click", async () => {
     const body = await response.json();
     if (!response.ok || !body.success) throw new Error(body.error || "AIチェックに失敗しました");
     aiResult.textContent = body.text.replace(/\s*・/g, "\n・").trim();
+    requestAnimationFrame(() => aiResult.scrollIntoView({ behavior: "smooth", block: "start" }));
   } catch (error) {
     aiResult.textContent = `AIチェックエラー：${error.message}`;
   } finally {
