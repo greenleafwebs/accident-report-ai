@@ -12,6 +12,17 @@ const aiResult = document.getElementById("aiResult");
 const selectionFields = ["第○報","事故状況の程度","性別：","住所","要介護度","発生場所","事故の種別","受診方法","診断内容","続柄","連絡した関係機関 (連絡した場合のみ)"];
 const textFields = ["氏名","発生日時","発生時状況、事故内容の詳細","発生時の対応","医療機関名","連絡先（電話番号）","診断名","検査、処置等の概要","利用者の状況","本人、家族、関係先等への追加対応予定","原因分析","再発防止策","その他"];
 
+// Geminiへ送らない項目。Worker側でも同じ除外を行うため、二重で保護する。
+const aiExcludedFields = new Set([
+  "氏名",
+  "住所",
+  "連絡先（電話番号）",
+  "医療機関名",
+  "診断名",
+  "利用者の状況",
+  "本人、家族、関係先等への追加対応予定"
+]);
+
 let latestSelected = [];
 let latestTexts = [];
 
@@ -163,10 +174,12 @@ aiCheck.addEventListener("click", async () => {
   aiResult.textContent = "AIが確認中…";
   aiCheck.disabled = true;
   try {
+    const aiSelected = latestSelected.filter((item) => !aiExcludedFields.has(item.field));
+    const aiTexts = latestTexts.filter((item) => !aiExcludedFields.has(item.field));
     const response = await fetch("/api/ai-check", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ selected: latestSelected, texts: latestTexts })
+      body: JSON.stringify({ selected: aiSelected, texts: aiTexts })
     });
     const body = await response.json();
     if (!response.ok || !body.success) throw new Error(body.error || "AIチェックに失敗しました");
