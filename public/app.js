@@ -1,6 +1,7 @@
 const form = document.getElementById("reportForm");
 const result = document.getElementById("result");
 const excelFile = document.getElementById("excelFile");
+const fileName = document.getElementById("fileName");
 const readExcel = document.getElementById("readExcel");
 const excelResult = document.getElementById("excelResult");
 const preview = document.getElementById("preview");
@@ -25,6 +26,11 @@ const aiExcludedFields = new Set([
 
 let latestSelected = [];
 let latestTexts = [];
+
+excelFile.addEventListener("change", () => {
+  const file = excelFile.files[0];
+  fileName.textContent = file ? file.name : "ファイルが選択されていません。";
+});
 
 readExcel.addEventListener("click", async () => {
   const file = excelFile.files[0];
