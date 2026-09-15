@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>事故報告書AI ver.0.1.7</title>
+  <title>事故報告書AI ver.0.1.8</title>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 </head>
 <body>
   <main>
-    <h1>事故報告書AI ver.0.1.7</h1>
-    <p>まずはExcelの読み取りテストを行います。</p>
+    <h1>事故報告書AI ver.0.1.8</h1>
+    <p>Excelを読み込み、AIが確認したほうがよい点を整理します。</p>
 
     <section>
       <h2>① Excelを選択</h2>
@@ -27,30 +27,14 @@
       <div id="textItems"></div>
 
       <div id="aiArea">
-        <h3>AIチェック</h3>
+        <h3>③ AIチェック</h3>
+        <p>AIは原因や再発防止策を決めず、確認したほうがよい点を整理します。</p>
         <button id="aiCheck" type="button" disabled>🤖 AIチェック</button>
         <div id="aiResult"></div>
       </div>
     </section>
-
-    <hr>
-
-    <section>
-      <h2>③ D1保存テスト（従来機能）</h2>
-      <form id="reportForm">
-        <label>提出日<br><input name="submission_date" type="date" required></label><br><br>
-        <label>第○報<br><input name="report_number" value="第1報" required></label><br><br>
-        <label>氏名<br><input name="person_name" required></label><br><br>
-        <label>発生場所<br><input name="occurrence_location" required></label><br><br>
-        <label>事故状況の程度<br><input name="severity" required></label><br><br>
-        <label>原因分析<br><textarea name="cause_analysis" required></textarea></label><br><br>
-        <label>再発防止策<br><textarea name="recurrence_prevention" required></textarea></label><br><br>
-        <button type="submit">D1へ保存</button>
-      </form>
-      <p id="result"></p>
-    </section>
   </main>
 
-  <script src="/app.js?v=20260915-7"></script>
+  <script src="/app.js?v=20260915-8"></script>
 </body>
 </html>
