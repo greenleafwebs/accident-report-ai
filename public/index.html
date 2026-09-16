@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>事故報告書AI ver.0.2.18</title>
+  <title>事故報告書AI ver.0.2.19</title>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   <style>
     .intro-notes p { margin: 4px 0; }
@@ -27,14 +27,14 @@
     .ai-progress-step.active { font-weight: 700; background: #d8f0f3; }
     .ai-progress-step.done { background: #e8f4e8; }
     .step-nav { display: flex; justify-content: space-between; gap: 10px; margin-top: 24px; }
+    .step2-actions { justify-content: flex-start; }
     .step-nav button { min-width: 100px; padding: 8px 16px; font: inherit; }
     #preview[hidden], #aiArea[hidden] { display: none; }
-    #aiNextInternal { display: none; }
   </style>
 </head>
 <body>
   <main>
-    <h1>事故報告書AI ver.0.2.18</h1>
+    <h1>事故報告書AI ver.0.2.19</h1>
     <div class="intro-notes">
       <p>■Excelを読み込み、内容を確認してから、AIで報告内容を整理します。</p>
       <p>■元のエクセルファイルの書式は変更しないでください。正しく読み込めません。</p>
@@ -60,8 +60,7 @@
         <p>読み込み内容に不備がある場合は、エクセルファイルを修正して、もう一度読み込んでください。</p>
         <div id="checkedItems"></div>
         <div id="textItems"></div>
-        <div class="step-nav">
-          <span></span>
+        <div class="step-nav step2-actions">
           <button id="step2Next" type="button">この内容でAIが報告内容を整理</button>
         </div>
       </div>
@@ -82,7 +81,7 @@
     </section>
   </main>
 
-  <script src="/app.js?v=20260916-36"></script>
+  <script src="/app.js?v=20260916-37"></script>
   <script>
     const aiStages = [
       "① 発生時状況、事故内容の詳細",
@@ -92,7 +91,6 @@
       "⑤ 再発防止策"
     ];
     let uiStage = 0;
-    const aiCompleted = new Set();
 
     const step1Panel = document.getElementById('step1Panel');
     const preview = document.getElementById('preview');
@@ -102,7 +100,7 @@
     const aiNext = document.getElementById('aiNext');
     const aiCheckButton = document.getElementById('aiCheck');
     const aiProgress = document.getElementById('aiProgress');
-    const draftResult = document.getElementById('draftResult');
+    const aiResult = document.getElementById('aiResult');
 
     function renderAiProgress() {
       aiProgress.innerHTML = '';
@@ -111,28 +109,20 @@
         el.className = 'ai-progress-step';
         el.textContent = label;
         el.classList.toggle('active', index === uiStage);
-        el.classList.toggle('done', aiCompleted.has(index));
         aiProgress.appendChild(el);
       });
     }
 
-    function showAiStage(index) {
-      uiStage = index;
-      renderAiProgress();
-      if (typeof window.startStage === 'function') {
-        window.startStage(index);
-      } else if (index === 0) {
-        aiCheckButton.click();
-      }
-      aiNext.disabled = true;
-    }
-
     step2Next.addEventListener('click', () => {
+      step2Next.disabled = true;
+      step2Next.textContent = 'AIが内容を確認・整理中…';
       step1Panel.hidden = true;
       preview.hidden = true;
       aiArea.hidden = false;
       uiStage = 0;
       renderAiProgress();
+      aiResult.textContent = 'AIが内容を確認・整理中…';
+      aiCheckButton.disabled = false;
       aiCheckButton.click();
     });
 
@@ -143,39 +133,22 @@
         preview.hidden = false;
         return;
       }
-      showAiStage(uiStage - 1);
+      uiStage -= 1;
+      renderAiProgress();
+      aiResult.textContent = 'AIが内容を確認・整理中…';
+      aiCheckButton.disabled = false;
+      aiCheckButton.click();
     });
 
     aiNext.addEventListener('click', () => {
       if (uiStage >= aiStages.length - 1) return;
-      const internal = document.getElementById('aiNextInternal');
-      if (internal && internal.dataset.ready === 'true') {
-        uiStage += 1;
-        renderAiProgress();
-        internal.click();
-      } else {
-        showAiStage(uiStage + 1);
-      }
+      uiStage += 1;
+      renderAiProgress();
+      aiResult.textContent = 'AIが内容を確認・整理中…';
+      aiCheckButton.disabled = false;
+      aiCheckButton.click();
       aiNext.disabled = true;
     });
-
-    const aiObserver = new MutationObserver(() => {
-      const buttons = draftResult.querySelectorAll('button');
-      buttons.forEach((button) => {
-        if (button.textContent.includes('を整理する') && button.id !== 'aiNextInternal') {
-          button.id = 'aiNextInternal';
-          button.dataset.ready = 'true';
-          button.style.display = 'none';
-        }
-      });
-      const internal = document.getElementById('aiNextInternal');
-      if (internal && internal.dataset.ready === 'true') {
-        aiCompleted.add(uiStage);
-        renderAiProgress();
-        aiNext.disabled = uiStage >= aiStages.length - 1;
-      }
-    });
-    aiObserver.observe(draftResult, { childList: true, subtree: true });
 
     renderAiProgress();
   </script>
