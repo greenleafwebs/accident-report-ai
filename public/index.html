@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>事故報告書AI ver.0.2.20</title>
+  <title>事故報告書AI ver.0.2.21</title>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   <style>
     .intro-notes p { margin: 4px 0; }
@@ -31,11 +31,12 @@
     details { margin: 14px 0; border: 1px solid #ddd; border-radius: 6px; padding: 0 12px; background: #fff; }
     details > summary { cursor: pointer; padding: 12px 0; font-weight: 700; }
     details[hidden] { display: none; }
+    #aiArea[hidden] { display: none; }
   </style>
 </head>
 <body>
   <main>
-    <h1>事故報告書AI ver.0.2.20</h1>
+    <h1>事故報告書AI ver.0.2.21</h1>
     <div class="intro-notes">
       <p>■Excelを読み込み、内容を確認してから、AIで報告内容を整理します。</p>
       <p>■元のエクセルファイルの書式は変更しないでください。正しく読み込めません。</p>
@@ -60,12 +61,9 @@
       <p>読み込み内容に不備がある場合は、エクセルファイルを修正して、もう一度読み込んでください。</p>
       <div id="checkedItems"></div>
       <div id="textItems"></div>
-      <div class="step2-actions">
-        <button id="step2Next" type="button">この内容でAIが報告内容を整理</button>
-      </div>
     </details>
 
-    <section id="aiArea">
+    <section id="aiArea" hidden>
       <h2>STEP 3　AIで報告内容を整理</h2>
       <div id="aiProgress" class="ai-progress"></div>
       <p>AIは項目ごとに内容を確認し、不足している情報がある場合だけ質問します。確定した内容を次の項目へ引き継ぎます。</p>
@@ -82,65 +80,22 @@
 
   <script src="/app.js?v=20260916-37"></script>
   <script>
-    const aiStages = [
-      "① 発生時状況、事故内容の詳細",
-      "② 発生時の対応",
-      "③ 利用者の状況",
-      "④ 事故の原因分析",
-      "⑤ 再発防止策"
-    ];
-    let uiStage = 0;
-
-    const step1Panel = document.getElementById('step1Panel');
     const preview = document.getElementById('preview');
-    const step2Next = document.getElementById('step2Next');
-    const aiBack = document.getElementById('aiBack');
-    const aiNext = document.getElementById('aiNext');
-    const aiCheckButton = document.getElementById('aiCheck');
-    const aiProgress = document.getElementById('aiProgress');
-    const aiResult = document.getElementById('aiResult');
+    const aiArea = document.getElementById('aiArea');
+    const readExcel = document.getElementById('readExcel');
 
-    function renderAiProgress() {
-      aiProgress.innerHTML = '';
-      aiStages.forEach((label, index) => {
-        const el = document.createElement('span');
-        el.className = 'ai-progress-step';
-        el.textContent = label;
-        el.classList.toggle('active', index === uiStage);
-        aiProgress.appendChild(el);
-      });
-    }
-
-    step2Next.addEventListener('click', () => {
-      step2Next.disabled = true;
-      step2Next.textContent = 'AIが内容を確認・整理中…';
-      uiStage = 0;
-      renderAiProgress();
-      aiResult.textContent = 'AIが内容を確認・整理中…';
-      aiCheckButton.disabled = false;
-      aiCheckButton.click();
+    readExcel.addEventListener('click', () => {
+      const waitForRead = () => {
+        if (!preview.hidden) {
+          aiArea.hidden = false;
+          preview.open = false;
+          aiArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          return;
+        }
+        setTimeout(waitForRead, 100);
+      };
+      setTimeout(waitForRead, 100);
     });
-
-    aiBack.addEventListener('click', () => {
-      if (uiStage === 0) return;
-      uiStage -= 1;
-      renderAiProgress();
-      aiResult.textContent = 'AIが内容を確認・整理中…';
-      aiCheckButton.disabled = false;
-      aiCheckButton.click();
-    });
-
-    aiNext.addEventListener('click', () => {
-      if (uiStage >= aiStages.length - 1) return;
-      uiStage += 1;
-      renderAiProgress();
-      aiResult.textContent = 'AIが内容を確認・整理中…';
-      aiCheckButton.disabled = false;
-      aiCheckButton.click();
-      aiNext.disabled = true;
-    });
-
-    renderAiProgress();
   </script>
 </body>
 </html>
