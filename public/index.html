@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>事故報告書AI ver.0.2.14</title>
+  <title>事故報告書AI ver.0.2.15</title>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   <style>
     .intro-notes p { margin: 4px 0; }
@@ -38,7 +38,7 @@
 </head>
 <body>
   <main>
-    <h1>事故報告書AI ver.0.2.14</h1>
+    <h1>事故報告書AI ver.0.2.15</h1>
     <div class="intro-notes">
       <p>■Excelを読み込み、内容を確認してから、AIで報告内容を整理します。</p>
       <p>■元のエクセルファイルの書式は変更しないでください。正しく読み込めません。</p>
@@ -107,6 +107,7 @@
 
     const progress = document.getElementById('mainProgress');
     const step1Panel = document.getElementById('step1Panel');
+    const preview = document.getElementById('preview');
     const step2Panel = document.getElementById('step2Panel');
     const aiArea = document.getElementById('aiArea');
     const step2Back = document.getElementById('step2Back');
@@ -115,7 +116,6 @@
     const aiNext = document.getElementById('aiNext');
     const aiCheckButton = document.getElementById('aiCheck');
     const aiProgress = document.getElementById('aiProgress');
-    const draftResult = document.getElementById('draftResult');
 
     function updateMainProgress() {
       progress.hidden = false;
@@ -141,7 +141,7 @@
     function showView(view) {
       uiView = view;
       step1Panel.hidden = view !== 1;
-      document.getElementById('preview').hidden = false;
+      preview.hidden = view === 1;
       step2Panel.hidden = view !== 2;
       aiArea.hidden = view !== 3;
       updateMainProgress();
@@ -150,15 +150,8 @@
 
     function refreshAiNext() {
       const internal = document.getElementById('aiNextInternal');
-      const hasConfirmed = internal && internal.dataset.ready === 'true';
-      aiNext.disabled = !hasConfirmed;
+      aiNext.disabled = !(internal && internal.dataset.ready === 'true');
     }
-
-    document.getElementById('readExcel').addEventListener('click', () => {
-      setTimeout(() => {
-        if (!document.getElementById('preview').hidden) showView(2);
-      }, 50);
-    });
 
     step2Back.addEventListener('click', () => showView(1));
     step2Next.addEventListener('click', () => {
@@ -168,8 +161,9 @@
     });
 
     aiBack.addEventListener('click', () => {
-      if (uiStage === 0) showView(2);
-      else {
+      if (uiStage === 0) {
+        showView(2);
+      } else {
         uiStage -= 1;
         startStage(uiStage);
         renderAiProgress();
@@ -180,8 +174,8 @@
     aiNext.addEventListener('click', () => {
       if (uiStage >= aiStages.length - 1) return;
       uiStage += 1;
-      showView(3);
       startStage(uiStage);
+      renderAiProgress();
       refreshAiNext();
     });
 
@@ -209,15 +203,16 @@
 
     const observer = new MutationObserver(() => {
       cleanAiLabels();
-      const internal = document.querySelector('#draftResult button:not(.ai-action)');
       const buttons = document.querySelectorAll('#draftResult button');
       buttons.forEach((button) => {
         if (button.textContent.includes('を整理する')) {
           button.id = 'aiNextInternal';
           button.dataset.ready = 'true';
           button.style.display = 'none';
-          aiCompleted.add(uiStage);
-          renderAiProgress();
+          if (!aiCompleted.has(uiStage)) {
+            aiCompleted.add(uiStage);
+            renderAiProgress();
+          }
           aiNext.disabled = uiStage >= aiStages.length - 1;
         }
       });
@@ -225,6 +220,7 @@
     });
     observer.observe(aiArea, { childList: true, subtree: true, characterData: true });
     cleanAiLabels();
+    updateMainProgress();
   </script>
 </body>
 </html>
