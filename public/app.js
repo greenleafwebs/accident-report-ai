@@ -147,7 +147,10 @@ function normalizeFieldName(fieldName) { return fieldName.replace(/[：:]+$/g, "
 function renderReadOnlyFields(container, items) {
   if (items.length === 0) { container.textContent = "読み取りできる内容は見つかりませんでした。"; return; }
   const grouped = new Map();
-  items.forEach((item) => { if (!grouped.has(item.field)) grouped.set(item.field, []).push(item.value); });
+  items.forEach((item) => {
+    if (!grouped.has(item.field)) grouped.set(item.field, []);
+    grouped.get(item.field).push(item.value);
+  });
   grouped.forEach((values, fieldName) => {
     const wrapper = document.createElement("div");
     wrapper.className = "read-item";
