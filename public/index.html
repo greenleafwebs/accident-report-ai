@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>事故報告書AI ver.0.2.21</title>
+  <title>事故報告書AI ver.0.2.22</title>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   <style>
     .intro-notes p { margin: 4px 0; }
@@ -36,7 +36,7 @@
 </head>
 <body>
   <main>
-    <h1>事故報告書AI ver.0.2.21</h1>
+    <h1>事故報告書AI ver.0.2.22</h1>
     <div class="intro-notes">
       <p>■Excelを読み込み、内容を確認してから、AIで報告内容を整理します。</p>
       <p>■元のエクセルファイルの書式は変更しないでください。正しく読み込めません。</p>
@@ -78,24 +78,6 @@
     </section>
   </main>
 
-  <script src="/app.js?v=20260916-37"></script>
-  <script>
-    const preview = document.getElementById('preview');
-    const aiArea = document.getElementById('aiArea');
-    const readExcel = document.getElementById('readExcel');
-
-    readExcel.addEventListener('click', () => {
-      const waitForRead = () => {
-        if (!preview.hidden) {
-          aiArea.hidden = false;
-          preview.open = false;
-          aiArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          return;
-        }
-        setTimeout(waitForRead, 100);
-      };
-      setTimeout(waitForRead, 100);
-    });
-  </script>
+  <script src="/app.js?v=20260916-38"></script>
 </body>
 </html>
