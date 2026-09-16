@@ -214,12 +214,18 @@ function renderQuestions(questions) {
       card.appendChild(label);
     });
     if (question.allow_text) {
-      const other = document.createElement("input");
-      other.type = "text";
-      other.className = "question-other";
-      other.placeholder = "その他の場合は入力してください";
-      other.dataset.other = "true";
-      card.appendChild(other);
+      const otherLabel = document.createElement("label");
+      const otherRadio = document.createElement("input");
+      otherRadio.type = "radio";
+      otherRadio.name = `question-${index}`;
+      otherRadio.value = "その他";
+      const otherInput = document.createElement("input");
+      otherInput.type = "text";
+      otherInput.className = "question-other";
+      otherInput.placeholder = "内容を入力";
+      otherInput.dataset.other = "true";
+      otherLabel.append(otherRadio, " その他：", otherInput);
+      card.appendChild(otherLabel);
     }
     questionArea.appendChild(card);
   });
@@ -273,7 +279,7 @@ function renderIncidentDraft(text, showActions) {
       textarea.rows = Math.max(6, Math.min(14, text.split("\n").length + 2));
       const save = document.createElement("button");
       save.type = "button";
-      save.textContent = "この内容でOK";
+      save.textContent = "手動修正した内容でOK";
       save.addEventListener("click", () => {
         box.textContent = textarea.value.trim();
         textarea.replaceWith(box);
