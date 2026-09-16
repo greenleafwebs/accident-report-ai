@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>事故報告書AI ver.0.2.19</title>
+  <title>事故報告書AI ver.0.2.20</title>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   <style>
     .intro-notes p { margin: 4px 0; }
@@ -26,15 +26,16 @@
     .ai-progress-step { padding: 5px 10px; border-radius: 999px; background: #eee; font-size: 13px; }
     .ai-progress-step.active { font-weight: 700; background: #d8f0f3; }
     .ai-progress-step.done { background: #e8f4e8; }
-    .step-nav { display: flex; justify-content: space-between; gap: 10px; margin-top: 24px; }
-    .step2-actions { justify-content: flex-start; }
+    .step2-actions { margin-top: 20px; }
     .step-nav button { min-width: 100px; padding: 8px 16px; font: inherit; }
-    #preview[hidden], #aiArea[hidden] { display: none; }
+    details { margin: 14px 0; border: 1px solid #ddd; border-radius: 6px; padding: 0 12px; background: #fff; }
+    details > summary { cursor: pointer; padding: 12px 0; font-weight: 700; }
+    details[hidden] { display: none; }
   </style>
 </head>
 <body>
   <main>
-    <h1>事故報告書AI ver.0.2.19</h1>
+    <h1>事故報告書AI ver.0.2.20</h1>
     <div class="intro-notes">
       <p>■Excelを読み込み、内容を確認してから、AIで報告内容を整理します。</p>
       <p>■元のエクセルファイルの書式は変更しないでください。正しく読み込めません。</p>
@@ -43,8 +44,8 @@
       <p>■最終的な内容や対策については、必ず内容を確認してください。</p>
     </div>
 
-    <section id="step1Panel">
-      <h2>STEP 1　Excelを選択</h2>
+    <details id="step1Panel" open>
+      <summary>STEP 1　Excelを選択</summary>
       <div class="file-select-row">
         <label id="excelFileLabel" for="excelFile">ファイルを選択</label>
         <input id="excelFile" type="file" accept=".xlsx,.xls">
@@ -52,21 +53,19 @@
       </div>
       <p><button id="readExcel" type="button">Excelを読み込む</button></p>
       <p id="excelResult"></p>
-    </section>
+    </details>
 
-    <section id="preview" hidden>
-      <div id="step2Panel">
-        <h2>STEP 2　読み取り結果を確認</h2>
-        <p>読み込み内容に不備がある場合は、エクセルファイルを修正して、もう一度読み込んでください。</p>
-        <div id="checkedItems"></div>
-        <div id="textItems"></div>
-        <div class="step-nav step2-actions">
-          <button id="step2Next" type="button">この内容でAIが報告内容を整理</button>
-        </div>
+    <details id="preview" hidden>
+      <summary>STEP 2　読み取り結果を確認</summary>
+      <p>読み込み内容に不備がある場合は、エクセルファイルを修正して、もう一度読み込んでください。</p>
+      <div id="checkedItems"></div>
+      <div id="textItems"></div>
+      <div class="step2-actions">
+        <button id="step2Next" type="button">この内容でAIが報告内容を整理</button>
       </div>
-    </section>
+    </details>
 
-    <section id="aiArea" hidden>
+    <section id="aiArea">
       <h2>STEP 3　AIで報告内容を整理</h2>
       <div id="aiProgress" class="ai-progress"></div>
       <p>AIは項目ごとに内容を確認し、不足している情報がある場合だけ質問します。確定した内容を次の項目へ引き継ぎます。</p>
@@ -95,7 +94,6 @@
     const step1Panel = document.getElementById('step1Panel');
     const preview = document.getElementById('preview');
     const step2Next = document.getElementById('step2Next');
-    const aiArea = document.getElementById('aiArea');
     const aiBack = document.getElementById('aiBack');
     const aiNext = document.getElementById('aiNext');
     const aiCheckButton = document.getElementById('aiCheck');
@@ -116,9 +114,6 @@
     step2Next.addEventListener('click', () => {
       step2Next.disabled = true;
       step2Next.textContent = 'AIが内容を確認・整理中…';
-      step1Panel.hidden = true;
-      preview.hidden = true;
-      aiArea.hidden = false;
       uiStage = 0;
       renderAiProgress();
       aiResult.textContent = 'AIが内容を確認・整理中…';
@@ -127,12 +122,7 @@
     });
 
     aiBack.addEventListener('click', () => {
-      if (uiStage === 0) {
-        aiArea.hidden = true;
-        step1Panel.hidden = false;
-        preview.hidden = false;
-        return;
-      }
+      if (uiStage === 0) return;
       uiStage -= 1;
       renderAiProgress();
       aiResult.textContent = 'AIが内容を確認・整理中…';
