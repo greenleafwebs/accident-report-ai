@@ -5,6 +5,7 @@ const fileName = document.getElementById("selectedFileName");
 const readExcel = document.getElementById("readExcel");
 const excelResult = document.getElementById("excelResult");
 const preview = document.getElementById("preview");
+const aiArea = document.getElementById("aiArea");
 const checkedItems = document.getElementById("checkedItems");
 const textItems = document.getElementById("textItems");
 const aiCheck = document.getElementById("aiCheck");
@@ -44,6 +45,8 @@ readExcel.addEventListener("click", async () => {
   aiResult.textContent = "";
   aiCheck.disabled = true;
   preview.hidden = true;
+  aiArea.hidden = true;
+  preview.open = true;
   confirmedSections = {};
   currentStageIndex = 0;
   currentRound = 0;
@@ -75,6 +78,8 @@ readExcel.addEventListener("click", async () => {
     renderReadOnlyFields(checkedItems, selected);
     renderReadOnlyFields(textItems, texts);
     preview.hidden = false;
+    preview.open = true;
+    aiArea.hidden = false;
     aiCheck.disabled = selected.length === 0 && texts.length === 0;
     excelResult.textContent = `読み込み完了：${workbook.SheetNames.length}シート`;
   } catch (error) {
@@ -142,7 +147,7 @@ function normalizeFieldName(fieldName) { return fieldName.replace(/[：:]+$/g, "
 function renderReadOnlyFields(container, items) {
   if (items.length === 0) { container.textContent = "読み取りできる内容は見つかりませんでした。"; return; }
   const grouped = new Map();
-  items.forEach((item) => { if (!grouped.has(item.field)) grouped.set(item.field, []); grouped.get(item.field).push(item.value); });
+  items.forEach((item) => { if (!grouped.has(item.field)) grouped.set(item.field, []).push(item.value); });
   grouped.forEach((values, fieldName) => {
     const wrapper = document.createElement("div");
     wrapper.className = "read-item";
@@ -318,8 +323,10 @@ if (form) {
       const response = await fetch("/api/reports", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
       const body = await response.json();
       if (!response.ok || !body.success) throw new Error(body.error || "保存に失敗しました");
-      result.textContent = `保存しました。ID: ${body.id}`;
+      result.textContent = `保存しました（ID: ${body.id}）`;
       form.reset();
-    } catch (error) { result.textContent = `エラー：${error.message}`; }
+    } catch (error) {
+      result.textContent = `保存エラー：${error.message}`;
+    }
   });
 }
