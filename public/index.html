@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>事故報告書AI ver.0.2.15</title>
+  <title>事故報告書AI ver.0.2.16</title>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   <style>
     .intro-notes p { margin: 4px 0; }
@@ -38,7 +38,7 @@
 </head>
 <body>
   <main>
-    <h1>事故報告書AI ver.0.2.15</h1>
+    <h1>事故報告書AI ver.0.2.16</h1>
     <div class="intro-notes">
       <p>■Excelを読み込み、内容を確認してから、AIで報告内容を整理します。</p>
       <p>■元のエクセルファイルの書式は変更しないでください。正しく読み込めません。</p>
@@ -201,7 +201,7 @@
       });
     };
 
-    const observer = new MutationObserver(() => {
+    const aiObserver = new MutationObserver(() => {
       cleanAiLabels();
       const buttons = document.querySelectorAll('#draftResult button');
       buttons.forEach((button) => {
@@ -218,8 +218,13 @@
       });
       refreshAiNext();
     });
-    observer.observe(aiArea, { childList: true, subtree: true, characterData: true });
+    aiObserver.observe(aiArea, { childList: true, subtree: true, characterData: true });
     cleanAiLabels();
+
+    const previewObserver = new MutationObserver(() => {
+      if (uiView === 1 && !preview.hidden) showView(2);
+    });
+    previewObserver.observe(preview, { attributes: true, attributeFilter: ['hidden'] });
     updateMainProgress();
   </script>
 </body>
