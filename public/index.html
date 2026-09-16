@@ -13,6 +13,13 @@
       border-radius: 8px;
       background: #f5faf4;
     }
+    #excelWarning {
+      padding: 10px 12px;
+      margin: 16px 0;
+      border: 1px solid #e5c98a;
+      border-radius: 8px;
+      background: #fff9e8;
+    }
     #excelFile { display: none; }
     #excelFileLabel {
       display: inline-block;
@@ -38,19 +45,7 @@
     .read-value {
       white-space: pre-wrap;
       overflow-wrap: anywhere;
-      margin-bottom: 6px;
     }
-    .correction {
-      width: 100%;
-      min-height: 42px;
-      box-sizing: border-box;
-      padding: 8px;
-      border: 1px solid #bbb;
-      border-radius: 4px;
-      font: inherit;
-      resize: vertical;
-    }
-    .correction-help { margin: 4px 0 0; font-size: 0.9em; color: #666; }
     #aiResult, #draftResult, #questionArea {
       white-space: pre-wrap;
       overflow-wrap: anywhere;
@@ -77,7 +72,11 @@
 <body>
   <main>
     <h1>事故報告書AI ver.0.2.0</h1>
-    <p>Excelを読み込み、内容を確認・訂正してから、AIと一緒に報告書を完成させます。</p>
+    <p>Excelを読み込み、内容を確認してから、AIと一緒に報告書を完成させます。</p>
+
+    <div id="excelWarning">
+      <strong>⚠️ 元のエクセルファイルの書式は変更しないでください。正しく読み込めません。</strong>
+    </div>
 
     <div id="privacyNotice">
       <strong>🔒 個人情報について</strong>
@@ -96,7 +95,7 @@
 
     <section id="preview" hidden>
       <h2>② 読み取り結果を確認</h2>
-      <p>読み込み内容に間違いがあれば、下の「訂正欄」に修正してください。訂正欄が空欄の場合は読み込み内容を使用します。</p>
+      <p>読み込み内容に不備がある場合は、エクセルファイルを修正して、もう一度読み込んでください。</p>
       <div id="checkedItems"></div>
       <div id="textItems"></div>
 
@@ -111,6 +110,6 @@
     </section>
   </main>
 
-  <script src="/app.js?v=20260916-20"></script>
+  <script src="/app.js?v=20260916-21"></script>
 </body>
 </html>
