@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>事故報告書AI ver.0.2.9</title>
+  <title>事故報告書AI ver.0.2.11</title>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   <style>
     .intro-notes p { margin: 4px 0; }
@@ -25,7 +25,7 @@
 </head>
 <body>
   <main>
-    <h1>事故報告書AI ver.0.2.9</h1>
+    <h1>事故報告書AI ver.0.2.11</h1>
     <div class="intro-notes">
       <p>■Excelを読み込み、内容を確認してから、AIで報告内容を整理します。</p>
       <p>■元のエクセルファイルの書式は変更しないでください。正しく読み込めません。</p>
@@ -34,7 +34,7 @@
       <p>■最終的な内容や対策については、必ず内容を確認してください。</p>
     </div>
     <section>
-      <h2>① Excelを選択</h2>
+      <h2>STEP 1　Excelを選択</h2>
       <label id="excelFileLabel" for="excelFile">ファイルを選択</label>
       <input id="excelFile" type="file" accept=".xlsx,.xls">
       <div id="selectedFileName"></div>
@@ -42,20 +42,35 @@
       <p id="excelResult"></p>
     </section>
     <section id="preview" hidden>
-      <h2>② 読み取り結果を確認</h2>
+      <h2>STEP 2　読み取り結果を確認</h2>
       <p>読み込み内容に不備がある場合は、エクセルファイルを修正して、もう一度読み込んでください。</p>
       <div id="checkedItems"></div>
       <div id="textItems"></div>
       <div id="aiArea">
-        <h2>③ AIで報告内容を整理</h2>
-        <p>AIは項目ごとに内容を確認し、不足している情報がある場合だけ質問します。①から順番に整理し、確定した内容を次の項目へ引き継ぎます。</p>
-        <button id="aiCheck" type="button" disabled>🤖 ① 発生時状況、事故内容を整理</button>
+        <h2>STEP 3　AIで報告内容を整理</h2>
+        <p>AIは項目ごとに内容を確認し、不足している情報がある場合だけ質問します。確定した内容を次の項目へ引き継ぎます。</p>
+        <button id="aiCheck" type="button" disabled>🤖 発生時状況、事故内容の詳細を整理</button>
         <div id="questionArea"></div>
         <div id="draftResult"></div>
         <div id="aiResult"></div>
       </div>
     </section>
   </main>
-  <script src="/app.js?v=20260916-31"></script>
+  <script src="/app.js?v=20260916-32"></script>
+  <script>
+    // 作業STEP（1～3）と、AI内部の5項目を混同しないよう、AI側の丸数字を表示しない。
+    const cleanAiLabels = () => {
+      const root = document.getElementById('aiArea');
+      if (!root) return;
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+      const nodes = [];
+      while (walker.nextNode()) nodes.push(walker.currentNode);
+      nodes.forEach(node => {
+        node.nodeValue = node.nodeValue.replace(/^[①②③④⑤]\s*/, '').replace(/①〜⑤の整理が完了しました。/, '全5項目の整理が完了しました。');
+      });
+    };
+    new MutationObserver(cleanAiLabels).observe(document.getElementById('aiArea'), { childList: true, subtree: true, characterData: true });
+    cleanAiLabels();
+  </script>
 </body>
 </html>
