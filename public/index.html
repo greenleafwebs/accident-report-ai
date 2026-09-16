@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>事故報告書AI ver.0.2.2</title>
+  <title>事故報告書AI ver.0.2.3</title>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   <style>
     .intro-notes p { margin: 4px 0; }
@@ -28,7 +28,19 @@
       border-radius: 6px;
       background: #fff;
     }
+    .read-item-inline {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+    }
     .read-item-label { font-weight: 700; margin-bottom: 6px; }
+    .read-item-inline .read-item-label {
+      margin-bottom: 0;
+      flex: 0 0 auto;
+    }
+    .read-item-inline .read-value {
+      flex: 1 1 auto;
+    }
     .read-value {
       white-space: pre-wrap;
       overflow-wrap: anywhere;
@@ -58,7 +70,7 @@
 </head>
 <body>
   <main>
-    <h1>事故報告書AI ver.0.2.2</h1>
+    <h1>事故報告書AI ver.0.2.3</h1>
 
     <div class="intro-notes">
       <p>■Excelを読み込み、内容を確認してから、AIで報告書案を作成します。</p>
@@ -94,6 +106,6 @@
     </section>
   </main>
 
-  <script src="/app.js?v=20260916-24"></script>
+  <script src="/app.js?v=20260916-25"></script>
 </body>
 </html>
