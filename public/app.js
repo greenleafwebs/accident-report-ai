@@ -15,11 +15,7 @@ const draftResult = document.getElementById("draftResult");
 const selectionFields = ["第○報","事故状況の程度","性別：","住所","要介護度","発生場所","事故の種別","受診方法","診断内容","続柄","連絡した関係機関 (連絡した場合のみ)"];
 const textFields = ["氏名","発生日時","発生時状況、事故内容の詳細","発生時の対応","医療機関名","連絡先（電話番号）","診断名","検査、処置等の概要","利用者の状況","本人、家族、関係先等への追加対応予定","原因分析","再発防止策","その他"];
 
-const aiExcludedFields = new Set([
-  "氏名",
-  "住所",
-  "連絡先（電話番号）"
-]);
+const aiExcludedFields = new Set(["氏名","住所","連絡先（電話番号）"]);
 
 let latestSelected = [];
 let latestTexts = [];
@@ -119,9 +115,7 @@ function getTextValue(row, fieldColumn, fieldName) {
   return cleanTextValues(values, fieldName);
 }
 
-function isMultiRowTextField(fieldName) {
-  return fieldName === "原因分析" || fieldName === "再発防止策";
-}
+function isMultiRowTextField(fieldName) { return fieldName === "原因分析" || fieldName === "再発防止策"; }
 
 function getMultiRowTextValue(rows, startRow, fieldColumn, fieldName) {
   for (let rowIndex = startRow + 1; rowIndex < Math.min(rows.length, startRow + 3); rowIndex++) {
@@ -148,13 +142,8 @@ function isKnownFieldLabel(value, currentFieldName) {
 }
 function normalizeFieldName(fieldName) { return fieldName.replace(/[：:]+$/g, "").trim(); }
 
-function renderSelectedFields(container, items) {
-  renderReadOnlyFields(container, items, "selected");
-}
-
-function renderTextFields(container, items) {
-  renderReadOnlyFields(container, items, "text");
-}
+function renderSelectedFields(container, items) { renderReadOnlyFields(container, items, "selected"); }
+function renderTextFields(container, items) { renderReadOnlyFields(container, items, "text"); }
 
 function renderReadOnlyFields(container, items, type) {
   if (items.length === 0) {
@@ -180,6 +169,7 @@ function renderReadOnlyFields(container, items, type) {
     readValue.className = "read-value";
     readValue.textContent = [...new Set(values)].join(type === "selected" ? "、" : " / ");
 
+    if (type === "selected") wrapper.classList.add("read-item-inline");
     wrapper.append(label, readValue);
     container.appendChild(wrapper);
   });
@@ -195,14 +185,9 @@ async function requestAi(payload) {
   draftResult.innerHTML = "";
   aiCheck.disabled = true;
   try {
-    const response = await fetch("/api/ai-check", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
+    const response = await fetch("/api/ai-check", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
     const body = await response.json();
     if (!response.ok || !body.success) throw new Error(body.error || "AI処理に失敗しました");
-
     if (body.questions?.length) {
       renderQuestions(body.questions);
       aiResult.textContent = "不足している情報があります。選択式を中心に回答してください。";
@@ -221,16 +206,13 @@ function renderQuestions(questions) {
   const title = document.createElement("h3");
   title.textContent = `確認質問（${questions.length}問）`;
   questionArea.appendChild(title);
-
   questions.forEach((question, index) => {
     const card = document.createElement("div");
     card.className = "question-card";
     card.dataset.index = String(index);
-
     const prompt = document.createElement("p");
     prompt.textContent = `${index + 1}. ${question.question}`;
     card.appendChild(prompt);
-
     const options = Array.isArray(question.options) ? question.options : [];
     options.forEach((option) => {
       const label = document.createElement("label");
@@ -241,7 +223,6 @@ function renderQuestions(questions) {
       label.append(radio, ` ${option}`);
       card.appendChild(label);
     });
-
     if (question.allow_text) {
       const other = document.createElement("input");
       other.type = "text";
@@ -252,7 +233,6 @@ function renderQuestions(questions) {
     }
     questionArea.appendChild(card);
   });
-
   const submit = document.createElement("button");
   submit.type = "button";
   submit.textContent = "回答して報告書を作成";
