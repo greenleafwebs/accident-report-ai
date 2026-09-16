@@ -9,19 +9,17 @@ const checkedItems = document.getElementById("checkedItems");
 const textItems = document.getElementById("textItems");
 const aiCheck = document.getElementById("aiCheck");
 const aiResult = document.getElementById("aiResult");
+const questionArea = document.getElementById("questionArea");
+const draftResult = document.getElementById("draftResult");
 
 const selectionFields = ["第○報","事故状況の程度","性別：","住所","要介護度","発生場所","事故の種別","受診方法","診断内容","続柄","連絡した関係機関 (連絡した場合のみ)"];
 const textFields = ["氏名","発生日時","発生時状況、事故内容の詳細","発生時の対応","医療機関名","連絡先（電話番号）","診断名","検査、処置等の概要","利用者の状況","本人、家族、関係先等への追加対応予定","原因分析","再発防止策","その他"];
 
-// Geminiへ送らない項目。画面の読み取り結果にも表示しない。Worker側でも同じ除外を行うため、二重で保護する。
+// Geminiへ送らない項目。個人情報・健康情報はブラウザ内では確認・訂正できるが、AI送信時に除外する。
 const aiExcludedFields = new Set([
   "氏名",
   "住所",
-  "連絡先（電話番号）",
-  "医療機関名",
-  "診断名",
-  "利用者の状況",
-  "本人、家族、関係先等への追加対応予定"
+  "連絡先（電話番号）"
 ]);
 
 let latestSelected = [];
@@ -38,6 +36,8 @@ readExcel.addEventListener("click", async () => {
   excelResult.textContent = "読み込み中…";
   checkedItems.innerHTML = "";
   textItems.innerHTML = "";
+  questionArea.innerHTML = "";
+  draftResult.innerHTML = "";
   aiResult.textContent = "";
   aiCheck.disabled = true;
   preview.hidden = true;
@@ -98,7 +98,6 @@ function getCheckedValues(row, fieldColumn) {
     if (value.includes("■")) {
       const right = String(row[index + 1] ?? "").trim();
       if (right && !right.includes("□") && !right.includes("■") && !right.includes("☐") && !right.includes("☑")) {
-        // ■で選択されたセル内の改行は、AIへの入力時に意味を持たないため空白へ統一する。
         values.push(normalizeSelectedValue(right));
       }
     }
@@ -151,74 +150,186 @@ function isKnownFieldLabel(value, currentFieldName) {
 function normalizeFieldName(fieldName) { return fieldName.replace(/[：:]+$/g, "").trim(); }
 
 function renderSelectedFields(container, items) {
-  const visibleItems = items.filter((item) => !aiExcludedFields.has(item.field));
-  if (visibleItems.length === 0) { container.textContent = "表示できる項目は見つかりませんでした。"; return; }
-  const grouped = new Map();
-  visibleItems.forEach((item) => {
-    if (!grouped.has(item.field)) grouped.set(item.field, []);
-    grouped.get(item.field).push(item);
-  });
-  const list = document.createElement("ul");
-  grouped.forEach((fieldItems, fieldName) => {
-    const li = document.createElement("li");
-    const values = [...new Set(fieldItems.map((item) => item.value))];
-    li.textContent = `${normalizeFieldName(fieldName)}：${values.join("、")}`;
-    list.appendChild(li);
-  });
-  container.appendChild(list);
+  renderEditableFields(container, items, "selected");
 }
 
 function renderTextFields(container, items) {
-  const visibleItems = items.filter((item) => !aiExcludedFields.has(item.field));
-  if (visibleItems.length === 0) { container.textContent = "表示できる内容は見つかりませんでした。"; return; }
+  renderEditableFields(container, items, "text");
+}
+
+function renderEditableFields(container, items, type) {
+  if (items.length === 0) {
+    container.textContent = "読み取りできる内容は見つかりませんでした。";
+    return;
+  }
+
   const grouped = new Map();
-  visibleItems.forEach((item) => {
+  items.forEach((item) => {
     if (!grouped.has(item.field)) grouped.set(item.field, []);
     grouped.get(item.field).push(item.value);
   });
-  const list = document.createElement("ul");
+
   grouped.forEach((values, fieldName) => {
-    const li = document.createElement("li");
-    li.textContent = `${normalizeFieldName(fieldName)}：${[...new Set(values)].join(" / ")}`;
-    list.appendChild(li);
+    const wrapper = document.createElement("div");
+    wrapper.className = "read-item";
+
+    const label = document.createElement("div");
+    label.className = "read-item-label";
+    label.textContent = normalizeFieldName(fieldName);
+
+    const readValue = document.createElement("div");
+    readValue.className = "read-value";
+    readValue.textContent = [...new Set(values)].join(type === "selected" ? "、" : " / ");
+
+    const correction = document.createElement("textarea");
+    correction.className = "correction";
+    correction.dataset.field = fieldName;
+    correction.dataset.original = readValue.textContent;
+    correction.placeholder = "読み込み内容に間違いがある場合だけ、ここを訂正してください。";
+
+    const help = document.createElement("p");
+    help.className = "correction-help";
+    help.textContent = "訂正欄が空欄なら、読み込み内容をそのまま使用します。";
+
+    wrapper.append(label, readValue, correction, help);
+    container.appendChild(wrapper);
   });
-  container.appendChild(list);
+}
+
+function collectCorrectedItems(items) {
+  const corrections = new Map();
+  document.querySelectorAll(".correction").forEach((input) => {
+    const value = input.value.trim();
+    if (value) corrections.set(input.dataset.field, value);
+  });
+
+  const grouped = new Map();
+  items.forEach((item) => {
+    if (!grouped.has(item.field)) grouped.set(item.field, []);
+    grouped.get(item.field).push(item);
+  });
+
+  const output = [];
+  grouped.forEach((fieldItems, fieldName) => {
+    if (corrections.has(fieldName)) {
+      output.push({ field: fieldName, value: corrections.get(fieldName) });
+    } else {
+      [...new Set(fieldItems.map((item) => item.value))].forEach((value) => output.push({ field: fieldName, value }));
+    }
+  });
+  return output;
 }
 
 aiCheck.addEventListener("click", async () => {
-  aiResult.textContent = "AIが確認中…";
+  await requestAi({ selected: collectCorrectedItems(latestSelected), texts: collectCorrectedItems(latestTexts), answers: [] });
+});
+
+async function requestAi(payload) {
+  aiResult.textContent = "AIが確認・作成中…";
+  questionArea.innerHTML = "";
+  draftResult.innerHTML = "";
   aiCheck.disabled = true;
   try {
-    const aiSelected = latestSelected.filter((item) => !aiExcludedFields.has(item.field));
-    const aiTexts = latestTexts.filter((item) => !aiExcludedFields.has(item.field));
     const response = await fetch("/api/ai-check", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ selected: aiSelected, texts: aiTexts })
+      body: JSON.stringify(payload)
     });
     const body = await response.json();
-    if (!response.ok || !body.success) throw new Error(body.error || "AIチェックに失敗しました");
-    // 「・」が文章中に含まれる場合（例：切傷・擦過傷）は改行しない。行頭の「・」だけを箇条書きとして扱う。
-    aiResult.textContent = body.text.replace(/\r\n/g, "\n").replace(/(^|\n)[ \t]*・/g, "$1・").trim();
-    requestAnimationFrame(() => aiResult.scrollIntoView({ behavior: "smooth", block: "start" }));
+    if (!response.ok || !body.success) throw new Error(body.error || "AI処理に失敗しました");
+
+    if (body.questions?.length) {
+      renderQuestions(body.questions);
+      aiResult.textContent = "不足している情報があります。選択式を中心に回答してください。";
+    } else {
+      renderDraft(body.draft || body.text || "AIから回答を取得できませんでした。");
+      aiResult.textContent = "確認が完了しました。必要に応じて内容を修正してから最終確認してください。";
+    }
   } catch (error) {
-    aiResult.textContent = `AIチェックエラー：${error.message}`;
+    aiResult.textContent = `AI処理エラー：${error.message}`;
   } finally {
     aiCheck.disabled = false;
   }
-});
+}
 
-form.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  result.textContent = "保存中…";
-  const data = Object.fromEntries(new FormData(form).entries());
-  try {
-    const response = await fetch("/api/reports", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
-    const body = await response.json();
-    if (!response.ok || !body.success) throw new Error(body.error || "保存に失敗しました");
-    result.textContent = `保存しました。ID: ${body.id}`;
-    form.reset();
-  } catch (error) {
-    result.textContent = `エラー：${error.message}`;
-  }
-});
+function renderQuestions(questions) {
+  const title = document.createElement("h3");
+  title.textContent = `確認質問（${questions.length}問）`;
+  questionArea.appendChild(title);
+
+  questions.forEach((question, index) => {
+    const card = document.createElement("div");
+    card.className = "question-card";
+    card.dataset.index = String(index);
+
+    const prompt = document.createElement("p");
+    prompt.textContent = `${index + 1}. ${question.question}`;
+    card.appendChild(prompt);
+
+    const options = Array.isArray(question.options) ? question.options : [];
+    options.forEach((option, optionIndex) => {
+      const label = document.createElement("label");
+      const radio = document.createElement("input");
+      radio.type = "radio";
+      radio.name = `question-${index}`;
+      radio.value = option;
+      label.append(radio, ` ${option}`);
+      card.appendChild(label);
+    });
+
+    if (question.allow_text) {
+      const other = document.createElement("input");
+      other.type = "text";
+      other.className = "question-other";
+      other.placeholder = "選択肢にない場合のみ入力";
+      other.dataset.other = "true";
+      card.appendChild(other);
+    }
+    questionArea.appendChild(card);
+  });
+
+  const submit = document.createElement("button");
+  submit.type = "button";
+  submit.textContent = "回答して報告書を作成";
+  submit.addEventListener("click", async () => {
+    const answers = [];
+    document.querySelectorAll(".question-card").forEach((card, index) => {
+      const selected = card.querySelector(`input[name="question-${index}"]:checked`);
+      const other = card.querySelector("[data-other='true']");
+      const value = other?.value.trim() || selected?.value || "";
+      answers.push({ question: questions[index].question, answer: value });
+    });
+    if (answers.some((item) => !item.answer)) {
+      aiResult.textContent = "未回答の質問があります。必要な質問に回答してください。";
+      return;
+    }
+    await requestAi({ selected: collectCorrectedItems(latestSelected), texts: collectCorrectedItems(latestTexts), answers });
+  });
+  questionArea.appendChild(submit);
+}
+
+function renderDraft(text) {
+  const title = document.createElement("h3");
+  title.textContent = "AIが整理した報告書案";
+  const box = document.createElement("div");
+  box.className = "draft-box";
+  box.textContent = text;
+  draftResult.append(title, box);
+}
+
+if (form) {
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    result.textContent = "保存中…";
+    const data = Object.fromEntries(new FormData(form).entries());
+    try {
+      const response = await fetch("/api/reports", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
+      const body = await response.json();
+      if (!response.ok || !body.success) throw new Error(body.error || "保存に失敗しました");
+      result.textContent = `保存しました。ID: ${body.id}`;
+      form.reset();
+    } catch (error) {
+      result.textContent = `エラー：${error.message}`;
+    }
+  });
+}
