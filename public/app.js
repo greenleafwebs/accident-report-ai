@@ -181,7 +181,7 @@ async function requestAi(payload) {
     if (body.questions?.length) {
       incidentQuestions = body.questions;
       renderQuestions(body.questions);
-      aiResult.textContent = "不足している情報を確認します。回答後、発生時状況・事故内容を文章に整理します。";
+      aiResult.textContent = "";
     } else {
       renderIncidentDraft(body.draft || body.text || "AIから文章を取得できませんでした。", body.draft ? true : false);
       aiResult.textContent = "内容を確認してください。";
@@ -204,7 +204,7 @@ function renderQuestions(questions) {
     prompt.textContent = `${index + 1}. ${question.question}`;
     card.appendChild(prompt);
     const options = Array.isArray(question.options) ? question.options : [];
-    options.forEach((option) => {
+    options.filter((option) => String(option).trim() !== "その他").forEach((option) => {
       const label = document.createElement("label");
       const radio = document.createElement("input");
       radio.type = "radio";
