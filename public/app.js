@@ -17,6 +17,8 @@ const textFields = ["発生日時","発生時状況、事故内容の詳細","�
 
 let latestSelected = [];
 let latestTexts = [];
+let incidentRound = 0;
+let incidentQuestions = [];
 
 excelFile.addEventListener("change", () => {
   const file = excelFile.files[0];
@@ -98,9 +100,7 @@ function getCheckedValues(row, fieldColumn) {
   return [...new Set(values)];
 }
 
-function normalizeSelectedValue(value) {
-  return String(value ?? "").replace(/[\r\n]+/g, " ").replace(/\s+/g, " ").trim();
-}
+function normalizeSelectedValue(value) { return String(value ?? "").replace(/[\r\n]+/g, " ").replace(/\s+/g, " ").trim(); }
 
 function getTextValue(row, fieldColumn, fieldName) {
   const values = [];
@@ -133,10 +133,7 @@ function cleanTextValues(values, fieldName) {
   return [...new Set(cleaned)].join(" ").trim();
 }
 function isCheckbox(value) { return /^[□■☐☑]+$/.test(value); }
-function isKnownFieldLabel(value, currentFieldName) {
-  const allFields = [...selectionFields, ...textFields];
-  return allFields.some((fieldName) => fieldName !== currentFieldName && value === fieldName);
-}
+function isKnownFieldLabel(value, currentFieldName) { return [...selectionFields, ...textFields].some((fieldName) => fieldName !== currentFieldName && value === fieldName); }
 function normalizeFieldName(fieldName) { return fieldName.replace(/[：:]+$/g, "").trim(); }
 
 function renderSelectedFields(container, items) { renderReadOnlyFields(container, items); }
@@ -167,7 +164,9 @@ function renderReadOnlyFields(container, items) {
 }
 
 aiCheck.addEventListener("click", async () => {
-  await requestAi({ selected: latestSelected, texts: latestTexts, answers: [] });
+  incidentRound = 0;
+  incidentQuestions = [];
+  await requestAi({ selected: latestSelected, texts: latestTexts, answers: [], stage: "incident_detail", round: 0 });
 });
 
 async function requestAi(payload) {
@@ -180,11 +179,12 @@ async function requestAi(payload) {
     const body = await response.json();
     if (!response.ok || !body.success) throw new Error(body.error || "AI処理に失敗しました");
     if (body.questions?.length) {
+      incidentQuestions = body.questions;
       renderQuestions(body.questions);
-      aiResult.textContent = "不足している情報があります。選択式を中心に回答してください。";
+      aiResult.textContent = "不足している情報を確認します。回答後、発生時状況・事故内容を文章に整理します。";
     } else {
-      renderDraft(body.draft || body.text || "AIから回答を取得できませんでした。");
-      aiResult.textContent = "確認が完了しました。必要に応じて内容を修正してから最終確認してください。";
+      renderIncidentDraft(body.draft || body.text || "AIから文章を取得できませんでした。", body.draft ? true : false);
+      aiResult.textContent = "内容を確認してください。";
     }
   } catch (error) {
     aiResult.textContent = `AI処理エラー：${error.message}`;
@@ -217,7 +217,7 @@ function renderQuestions(questions) {
       const other = document.createElement("input");
       other.type = "text";
       other.className = "question-other";
-      other.placeholder = "選択肢にない場合のみ入力";
+      other.placeholder = "その他の場合は入力してください";
       other.dataset.other = "true";
       card.appendChild(other);
     }
@@ -225,31 +225,69 @@ function renderQuestions(questions) {
   });
   const submit = document.createElement("button");
   submit.type = "button";
-  submit.textContent = "回答して報告書を作成";
+  submit.textContent = "回答して文章を作成";
   submit.addEventListener("click", async () => {
     const answers = [];
     document.querySelectorAll(".question-card").forEach((card, index) => {
       const selected = card.querySelector(`input[name="question-${index}"]:checked`);
       const other = card.querySelector("[data-other='true']");
-      const value = other?.value.trim() || selected?.value || "";
+      let value = selected?.value || "";
+      if (value === "その他" && other?.value.trim()) value = `その他：${other.value.trim()}`;
       answers.push({ question: questions[index].question, answer: value });
     });
     if (answers.some((item) => !item.answer)) {
       aiResult.textContent = "未回答の質問があります。必要な質問に回答してください。";
       return;
     }
-    await requestAi({ selected: latestSelected, texts: latestTexts, answers });
+    incidentRound = 1;
+    await requestAi({ selected: latestSelected, texts: latestTexts, answers, stage: "incident_detail", round: 1 });
   });
   questionArea.appendChild(submit);
 }
 
-function renderDraft(text) {
+function renderIncidentDraft(text, showActions) {
   const title = document.createElement("h3");
-  title.textContent = "AIが整理した報告書案";
+  title.textContent = "発生時状況、事故内容の詳細";
   const box = document.createElement("div");
   box.className = "draft-box";
   box.textContent = text;
   draftResult.append(title, box);
+  if (showActions) {
+    const actions = document.createElement("div");
+    actions.className = "draft-actions";
+    const ok = document.createElement("button");
+    ok.type = "button";
+    ok.textContent = "これでOK";
+    ok.addEventListener("click", () => {
+      aiResult.textContent = "① 発生時状況、事故内容の詳細をOKにしました。次は② 発生時の対応です。";
+      ok.disabled = true;
+      edit.disabled = true;
+    });
+    const edit = document.createElement("button");
+    edit.type = "button";
+    edit.textContent = "手動で訂正";
+    edit.addEventListener("click", () => {
+      const textarea = document.createElement("textarea");
+      textarea.className = "draft-edit";
+      textarea.value = text;
+      textarea.rows = Math.max(6, Math.min(14, text.split("\n").length + 2));
+      const save = document.createElement("button");
+      save.type = "button";
+      save.textContent = "この内容でOK";
+      save.addEventListener("click", () => {
+        box.textContent = textarea.value.trim();
+        textarea.replaceWith(box);
+        save.remove();
+        ok.disabled = true;
+        edit.disabled = true;
+        aiResult.textContent = "① 発生時状況、事故内容の詳細をOKにしました。次は② 発生時の対応です。";
+      });
+      box.replaceWith(textarea);
+      actions.appendChild(save);
+    });
+    actions.append(ok, edit);
+    draftResult.appendChild(actions);
+  }
 }
 
 if (form) {
