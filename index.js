@@ -91,7 +91,7 @@ ${info.points.map((point, index) => `${index + 1}. ${point}`).join("\n")}
 ・同じ表現の繰り返しを避けてください。
 
 【質問について】
-${questionAllowed ? `roundが0で、この項目を文章化するために重要な事実が不足している場合だけ質問してください。必要な質問は一度にまとめ、最大6問です。roundが1の場合は重大な不足がない限り質問せず、文章を作成してください。選択肢を作り、allow_textがtrueの場合は選択肢に「その他」を入れず、自由入力欄だけを用意してください。` : `質問は行わず、与えられた情報から整理案を作成してください。`}
+${questionAllowed ? `roundが0の場合、まず6つの確認観点を確認してください。そのうえで、「この事故を第三者が事故報告書として理解するために、本当に足りない情報は何か」を追加で点検してください。情報が十分なら質問は0個にしてください。不足がある場合だけ、本当に必要な質問を必要な数だけ作成してください。質問数に固定の下限・目標はありません。情報不足が多い場合は最大10問まで作成して構いませんが、10問にするために不要な質問を追加してはいけません。質問は重要度の高いものから並べてください。roundが1の場合は、重大な不足がない限り追加質問をせず、文章を作成してください。「不明」「確認できない」「記録なし」と回答できる内容について、無理に回答を求める質問にしないでください。選択肢を作り、allow_textがtrueの場合は選択肢に「その他」を入れず、自由入力欄だけを用意してください。` : `質問は行わず、与えられた情報から整理案を作成してください。`}
 
 【原因・再発防止について】
 ${stage === "cause" ? "原因分析はAIによる整理案です。本人・職員・環境の要因を、確認できた事実と分けて表現してください。断定しないでください。" : ""}
@@ -119,7 +119,7 @@ ${reportText}`;
         let parsed;
         try { parsed = JSON.parse(text.replace(/^```json\s*/i, "").replace(/\s*```$/i, "").trim()); }
         catch { return Response.json({ success: true, questions: [], draft: text }); }
-        return Response.json({ success: true, questions: Array.isArray(parsed.questions) ? parsed.questions.slice(0, 6) : [], draft: parsed.draft || "" });
+        return Response.json({ success: true, questions: Array.isArray(parsed.questions) ? parsed.questions.slice(0, 10) : [], draft: parsed.draft || "" });
       } catch (error) {
         return Response.json({ success: false, error: error.message }, { status: 500 });
       }
