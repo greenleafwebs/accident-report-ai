@@ -12,14 +12,16 @@ export default {
         const selected = Array.isArray(body.selected) ? body.selected : [];
         const texts = Array.isArray(body.texts) ? body.texts : [];
         const answers = Array.isArray(body.answers) ? body.answers : [];
+        const stage = body.stage || "incident_detail";
+        const round = Number(body.round || 0);
 
         if (selected.length === 0 && texts.length === 0) return Response.json({ success: false, error: "Excelの読み取り結果がありません" }, { status: 400 });
 
-        // 氏名・住所・電話番号など、直接個人を特定できる情報はAIへ送信しない。
-        // 要介護度・認知症高齢者日常生活自立度は、原因究明・再発防止を考えるための参考情報として送信する。
         const excludedFields = new Set([
           "氏名",
           "住所",
+          "性別",
+          "続柄",
           "連絡先（電話番号）",
           "医療機関名",
           "診断名"
@@ -48,62 +50,65 @@ export default {
           "【Excelから読み取った情報】",
           ...safeSelected.map((item) => `- ${item.field}: ${item.value}`),
           ...safeTexts.map((item) => `- ${item.field}: ${item.value}`),
-          answers.length ? "" : "",
-          answers.length ? "【これまでの確認質問への回答】" : "",
+          answers.length ? "【今回の確認質問への回答】" : "",
           ...answers.map((item) => `- ${item.question}: ${item.answer}`)
-        ].filter((line) => line !== "").join("\n");
+        ].filter(Boolean).join("\n");
 
-        const prompt = `あなたは介護施設の事故報告書を確認する補助AIです。
+        const isIncidentStage = stage === "incident_detail";
+        const prompt = isIncidentStage
+          ? `あなたは介護施設の事故報告書を整理する補助AIです。
 
-あなたの役割は「問いかけ・整理・見落としチェック」です。
-原因分析や再発防止策をAIだけで決定してはいけません。職員や管理者が判断するための確認材料を整理してください。
+今回は「発生時状況、事故内容の詳細」だけを扱います。
+目的は、第三者が読んだときに「いつ・どこで・誰に・何が起きたのか、その時の利用者・職員・ハードや環境の状況、発見時の状況」が分かる文章に整理することです。
 
-【重要な扱い】
-・氏名、住所、電話番号など、個人を直接特定できる情報は送信対象から除外しています。
-・「要介護度」「認知症高齢者日常生活自立度」は、本人の状態を把握し、原因究明や再発防止を考えるための参考情報として使用してください。
-・これらの情報から、書かれていない事実を推測・断定してはいけません。
-・要介護度や認知症高齢者日常生活自立度だけを理由に、事故原因や対策を決めつけてはいけません。
+【確認する6つの観点】
+1. 利用者の状況：事故直前の状態、普段との違いなど
+2. 職員の状況：事故時に職員がどこで何をしていたか
+3. ハード・環境の状況：ベッド、車いす、床、手すり、センサーなどの状態
+4. 事故発生直前の行動：利用者が何をしようとしていたか
+5. 事故そのもの：いつ、どこで、どのように起きたか
+6. 発見時の状況：誰が、どのような状態で発見したか
 
-【確認する観点】
-1. 事故が起きる前の普段の状態はどうだったか
-2. 最近、本人の状態に変化はなかったか
-3. センサーマットなど、事故を防ぐための対策はしていたか
-4. 機器・環境などのハード面での対策はできていたか
-5. 職員の対応や見守りの状況はどうだったか
-6. 原因分析に必要な情報が不足していないか
-7. 再発防止策について、ハード面の対策、本人への確認・話し合い、必要に応じた家族への協力依頼などを検討するための情報が不足していないか
-8. 明らかな矛盾や入力ミスがないか
+【重要】
+・今回は事実関係の整理だけです。原因分析や再発防止策を決めたり提案したりしないでください。
+・「なぜ事故が起きたのか」ではなく、「何が起きたのか」を確認してください。
+・書かれていない事実を推測・創作してはいけません。
+・「分からない」「確認できない」「記録なし」も有効な回答です。
+・要介護度、認知症高齢者日常生活自立度は参考情報ですが、それだけを理由に状態や原因を推測してはいけません。
+・質問は不足している事実がある場合だけ作成してください。
+・質問は原則として一度に必要なものをまとめてください。最大6問です。
+・選択肢を作り、「その他」を必ず選択肢に含め、自由入力できるようにしてください。
+・今回の回答後に再度質問する場合でも、追加質問は1回だけです。roundが1の場合は、重大な不足がない限り質問せず、文章を作成してください。
 
-本人との話し合いが適切でないケース（例：本人との意思疎通が難しいケース）では、その確認を無理に求めないでください。
-
-【質問のルール】
-・質問は本当に不足している情報がある場合だけ作成してください。
-・最大10問です。10問に満たなくても構いません。
-・すでにExcelに書かれている内容を、同じ意味で聞き直してはいけません。
-・原則として選択式にしてください。自由記述は、選択肢では確認できない場合だけ使用してください。
-・原因や再発防止策そのものを提案する質問ではなく、判断に必要な事実を確認する質問にしてください。
+【文章化のルール】
+・Excelの記載内容と今回の回答だけを材料にしてください。
+・時系列が分かるように整理してください。
+・原因を断定する表現は避けてください。
+・読みやすい自然な文章にしてください。
 
 【出力形式】
-質問が必要な場合は、必ず次のJSONだけを返してください。
+roundが0で、情報不足がある場合は次のJSONだけを返してください。
 {
   "questions": [
     {
       "question": "質問文",
-      "options": ["選択肢1", "選択肢2", "選択肢3"],
-      "allow_text": false
+      "options": ["選択肢1", "選択肢2", "その他"],
+      "allow_text": true
     }
   ]
 }
 
-質問が不要な場合は、次のJSONだけを返してください。
+情報が十分、またはroundが1の場合は、次のJSONだけを返してください。
 {
-  "questions": []
+  "questions": [],
+  "draft": "発生時状況、事故内容の詳細の文章"
 }
 
 JSON以外の文章は絶対に追加しないでください。
 
 事故報告書の情報:
-${reportText}`;
+${reportText}`
+          : `今回は「${stage}」の整理を行います。現在は開発中のため、まず発生時状況の整理を行う段階です。質問はせず、入力情報をそのまま整理してください。JSONのみで返してください。\n\n${reportText}`;
 
         const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent", {
           method: "POST",
@@ -127,7 +132,11 @@ ${reportText}`;
           return Response.json({ success: true, questions: [], draft: text });
         }
 
-        return Response.json({ success: true, questions: Array.isArray(parsed.questions) ? parsed.questions.slice(0, 10) : [], draft: parsed.draft || "" });
+        return Response.json({
+          success: true,
+          questions: Array.isArray(parsed.questions) ? parsed.questions.slice(0, 6) : [],
+          draft: parsed.draft || ""
+        });
       } catch (error) {
         return Response.json({ success: false, error: error.message }, { status: 500 });
       }
