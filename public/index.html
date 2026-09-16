@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>事故報告書AI ver.0.2.17</title>
+  <title>事故報告書AI ver.0.2.18</title>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   <style>
     .intro-notes p { margin: 4px 0; }
@@ -34,7 +34,7 @@
 </head>
 <body>
   <main>
-    <h1>事故報告書AI ver.0.2.17</h1>
+    <h1>事故報告書AI ver.0.2.18</h1>
     <div class="intro-notes">
       <p>■Excelを読み込み、内容を確認してから、AIで報告内容を整理します。</p>
       <p>■元のエクセルファイルの書式は変更しないでください。正しく読み込めません。</p>
@@ -82,7 +82,7 @@
     </section>
   </main>
 
-  <script src="/app.js?v=20260916-35"></script>
+  <script src="/app.js?v=20260916-36"></script>
   <script>
     const aiStages = [
       "① 発生時状況、事故内容の詳細",
@@ -102,6 +102,7 @@
     const aiNext = document.getElementById('aiNext');
     const aiCheckButton = document.getElementById('aiCheck');
     const aiProgress = document.getElementById('aiProgress');
+    const draftResult = document.getElementById('draftResult');
 
     function renderAiProgress() {
       aiProgress.innerHTML = '';
@@ -120,7 +121,7 @@
       renderAiProgress();
       if (typeof window.startStage === 'function') {
         window.startStage(index);
-      } else {
+      } else if (index === 0) {
         aiCheckButton.click();
       }
       aiNext.disabled = true;
@@ -147,11 +148,26 @@
 
     aiNext.addEventListener('click', () => {
       if (uiStage >= aiStages.length - 1) return;
-      showAiStage(uiStage + 1);
+      const internal = document.getElementById('aiNextInternal');
+      if (internal && internal.dataset.ready === 'true') {
+        uiStage += 1;
+        renderAiProgress();
+        internal.click();
+      } else {
+        showAiStage(uiStage + 1);
+      }
+      aiNext.disabled = true;
     });
 
-    // AI整理開始後に生成される内部の「次の項目」ボタンを、画面下の［次へ］から操作する。
     const aiObserver = new MutationObserver(() => {
+      const buttons = draftResult.querySelectorAll('button');
+      buttons.forEach((button) => {
+        if (button.textContent.includes('を整理する') && button.id !== 'aiNextInternal') {
+          button.id = 'aiNextInternal';
+          button.dataset.ready = 'true';
+          button.style.display = 'none';
+        }
+      });
       const internal = document.getElementById('aiNextInternal');
       if (internal && internal.dataset.ready === 'true') {
         aiCompleted.add(uiStage);
@@ -159,13 +175,7 @@
         aiNext.disabled = uiStage >= aiStages.length - 1;
       }
     });
-    aiObserver.observe(document.getElementById('draftResult'), { childList: true, subtree: true });
-
-    // app.js側で生成された内部ボタンを、画面下の［次へ］から利用する。
-    aiNext.addEventListener('click', () => {
-      const internal = document.getElementById('aiNextInternal');
-      if (internal && internal.dataset.ready === 'true') internal.click();
-    });
+    aiObserver.observe(draftResult, { childList: true, subtree: true });
 
     renderAiProgress();
   </script>
