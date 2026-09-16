@@ -6,13 +6,6 @@
   <title>事故報告書AI ver.0.2.0</title>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   <style>
-    #excelWarning {
-      padding: 10px 12px;
-      margin: 16px 0;
-      border: 1px solid #e5c98a;
-      border-radius: 8px;
-      background: #fff9e8;
-    }
     #excelFile { display: none; }
     #excelFileLabel {
       display: inline-block;
@@ -65,13 +58,14 @@
 <body>
   <main>
     <h1>事故報告書AI ver.0.2.0</h1>
-    <p>Excelを読み込み、内容を確認してから、AIと一緒に報告書を完成させます。</p>
 
-    <div id="excelWarning">
-      <strong>⚠️ 元のエクセルファイルの書式は変更しないでください。正しく読み込めません。</strong>
+    <div class="intro-notes">
+      <p>■Excelを読み込み、内容を確認してから、AIで報告書案を作成します。</p>
+      <p>■元のエクセルファイルの書式は変更しないでください。正しく読み込めません。</p>
+      <p>■個人を直接特定できる情報（氏名・住所・電話番号）はAIへ送信しません。</p>
+      <p>■内容には不正確な情報や誤りが含まれる可能性があります。</p>
+      <p>■最終的な内容や対策については、必ず内容を確認してください。</p>
     </div>
-
-    <p>■個人を直接特定できる情報（氏名・住所・電話番号）はAIへ送信しません。</p>
 
     <section>
       <h2>① Excelを選択</h2>
