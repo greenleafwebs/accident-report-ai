@@ -12,10 +12,8 @@ const aiResult = document.getElementById("aiResult");
 const questionArea = document.getElementById("questionArea");
 const draftResult = document.getElementById("draftResult");
 
-const selectionFields = ["第○報","事故状況の程度","性別：","住所","要介護度","発生場所","事故の種別","受診方法","診断内容","続柄","連絡した関係機関 (連絡した場合のみ)"];
-const textFields = ["氏名","発生日時","発生時状況、事故内容の詳細","発生時の対応","医療機関名","連絡先（電話番号）","診断名","検査、処置等の概要","利用者の状況","本人、家族、関係先等への追加対応予定","原因分析","再発防止策","その他"];
-
-const aiExcludedFields = new Set(["氏名","住所","連絡先（電話番号）"]);
+const selectionFields = ["第○報","事故状況の程度","要介護度","認知症高齢者日常生活自立度","発生場所","事故の種別","受診方法","診断内容","連絡した関係機関 (連絡した場合のみ)"];
+const textFields = ["発生日時","発生時状況、事故内容の詳細","発生時の対応","医療機関名","診断名","検査、処置等の概要","利用者の状況","本人、家族、関係先等への追加対応予定","原因分析","再発防止策","その他"];
 
 let latestSelected = [];
 let latestTexts = [];
@@ -116,7 +114,6 @@ function getTextValue(row, fieldColumn, fieldName) {
 }
 
 function isMultiRowTextField(fieldName) { return fieldName === "原因分析" || fieldName === "再発防止策"; }
-
 function getMultiRowTextValue(rows, startRow, fieldColumn, fieldName) {
   for (let rowIndex = startRow + 1; rowIndex < Math.min(rows.length, startRow + 3); rowIndex++) {
     const row = rows[rowIndex];
@@ -142,34 +139,28 @@ function isKnownFieldLabel(value, currentFieldName) {
 }
 function normalizeFieldName(fieldName) { return fieldName.replace(/[：:]+$/g, "").trim(); }
 
-function renderSelectedFields(container, items) { renderReadOnlyFields(container, items, "selected"); }
-function renderTextFields(container, items) { renderReadOnlyFields(container, items, "text"); }
+function renderSelectedFields(container, items) { renderReadOnlyFields(container, items); }
+function renderTextFields(container, items) { renderReadOnlyFields(container, items); }
 
-function renderReadOnlyFields(container, items, type) {
+function renderReadOnlyFields(container, items) {
   if (items.length === 0) {
     container.textContent = "読み取りできる内容は見つかりませんでした。";
     return;
   }
-
   const grouped = new Map();
   items.forEach((item) => {
     if (!grouped.has(item.field)) grouped.set(item.field, []);
     grouped.get(item.field).push(item.value);
   });
-
   grouped.forEach((values, fieldName) => {
     const wrapper = document.createElement("div");
     wrapper.className = "read-item";
-
-    const label = document.createElement("div");
+    const label = document.createElement("span");
     label.className = "read-item-label";
-    label.textContent = normalizeFieldName(fieldName);
-
-    const readValue = document.createElement("div");
+    label.textContent = `${normalizeFieldName(fieldName)}：`;
+    const readValue = document.createElement("span");
     readValue.className = "read-value";
-    readValue.textContent = [...new Set(values)].join(type === "selected" ? "、" : " / ");
-
-    if (type === "selected") wrapper.classList.add("read-item-inline");
+    readValue.textContent = [...new Set(values)].join("、");
     wrapper.append(label, readValue);
     container.appendChild(wrapper);
   });
@@ -209,7 +200,6 @@ function renderQuestions(questions) {
   questions.forEach((question, index) => {
     const card = document.createElement("div");
     card.className = "question-card";
-    card.dataset.index = String(index);
     const prompt = document.createElement("p");
     prompt.textContent = `${index + 1}. ${question.question}`;
     card.appendChild(prompt);
