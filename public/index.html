@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>事故報告書AI ver.0.2.6</title>
+  <title>事故報告書AI ver.0.2.7</title>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   <style>
     .intro-notes p { margin: 4px 0; }
@@ -17,7 +17,7 @@
     .question-card { margin: 12px 0; padding: 12px; border: 1px solid #ddd; border-radius: 6px; background: #fafafa; }
     .question-card p { margin-top: 0; font-weight: 700; }
     .question-card label { display: block; margin: 7px 0; }
-    .question-other { margin-top: 8px; width: 100%; box-sizing: border-box; padding: 7px; }
+    .question-other { display: inline-block; margin-left: 6px; width: min(320px, 70%); box-sizing: border-box; padding: 7px; }
     .draft-box { padding: 12px; border: 1px solid #cfcfcf; border-radius: 6px; background: #fff; }
     .draft-actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
     .draft-edit { width: 100%; box-sizing: border-box; padding: 10px; font: inherit; line-height: 1.5; }
@@ -25,7 +25,7 @@
 </head>
 <body>
   <main>
-    <h1>事故報告書AI ver.0.2.6</h1>
+    <h1>事故報告書AI ver.0.2.7</h1>
     <div class="intro-notes">
       <p>■Excelを読み込み、内容を確認してから、AIで報告内容を整理します。</p>
       <p>■元のエクセルファイルの書式は変更しないでください。正しく読み込めません。</p>
@@ -56,6 +56,6 @@
       </div>
     </section>
   </main>
-  <script src="/app.js?v=20260916-28"></script>
+  <script src="/app.js?v=20260916-29"></script>
 </body>
 </html>
