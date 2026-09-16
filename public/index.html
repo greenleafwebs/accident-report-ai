@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>事故報告書AI ver.0.2.3</title>
+  <title>事故報告書AI ver.0.2.4</title>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   <style>
     .intro-notes p { margin: 4px 0; }
@@ -16,62 +16,21 @@
       background: #f3f3f3;
       cursor: pointer;
     }
-    #selectedFileName {
-      margin: 8px 0;
-      overflow-wrap: anywhere;
-      word-break: break-all;
-    }
-    .read-item {
-      margin: 10px 0;
-      padding: 10px;
-      border: 1px solid #ddd;
-      border-radius: 6px;
-      background: #fff;
-    }
-    .read-item-inline {
-      display: flex;
-      align-items: baseline;
-      gap: 12px;
-    }
-    .read-item-label { font-weight: 700; margin-bottom: 6px; }
-    .read-item-inline .read-item-label {
-      margin-bottom: 0;
-      flex: 0 0 auto;
-    }
-    .read-item-inline .read-value {
-      flex: 1 1 auto;
-    }
-    .read-value {
-      white-space: pre-wrap;
-      overflow-wrap: anywhere;
-    }
-    #aiResult, #draftResult, #questionArea {
-      white-space: pre-wrap;
-      overflow-wrap: anywhere;
-      margin-bottom: 24px;
-    }
-    .question-card {
-      margin: 12px 0;
-      padding: 12px;
-      border: 1px solid #ddd;
-      border-radius: 6px;
-      background: #fafafa;
-    }
+    #selectedFileName { margin: 8px 0; overflow-wrap: anywhere; word-break: break-all; }
+    .read-item { margin: 4px 0; }
+    .read-item-label { font-weight: 700; }
+    .read-value { white-space: pre-wrap; overflow-wrap: anywhere; }
+    #aiResult, #draftResult, #questionArea { white-space: pre-wrap; overflow-wrap: anywhere; margin-bottom: 24px; }
+    .question-card { margin: 12px 0; padding: 12px; border: 1px solid #ddd; border-radius: 6px; background: #fafafa; }
     .question-card p { margin-top: 0; font-weight: 700; }
     .question-card label { display: block; margin: 7px 0; }
     .question-other { margin-top: 8px; width: 100%; box-sizing: border-box; padding: 7px; }
-    .draft-box {
-      padding: 12px;
-      border: 1px solid #cfcfcf;
-      border-radius: 6px;
-      background: #fff;
-    }
+    .draft-box { padding: 12px; border: 1px solid #cfcfcf; border-radius: 6px; background: #fff; }
   </style>
 </head>
 <body>
   <main>
-    <h1>事故報告書AI ver.0.2.3</h1>
-
+    <h1>事故報告書AI ver.0.2.4</h1>
     <div class="intro-notes">
       <p>■Excelを読み込み、内容を確認してから、AIで報告書案を作成します。</p>
       <p>■元のエクセルファイルの書式は変更しないでください。正しく読み込めません。</p>
@@ -79,7 +38,6 @@
       <p>■内容には不正確な情報や誤りが含まれる可能性があります。</p>
       <p>■最終的な内容や対策については、必ず内容を確認してください。</p>
     </div>
-
     <section>
       <h2>① Excelを選択</h2>
       <label id="excelFileLabel" for="excelFile">ファイルを選択</label>
@@ -88,13 +46,11 @@
       <button id="readExcel" type="button">Excelを読み込む</button>
       <p id="excelResult"></p>
     </section>
-
     <section id="preview" hidden>
       <h2>② 読み取り結果を確認</h2>
       <p>読み込み内容に不備がある場合は、エクセルファイルを修正して、もう一度読み込んでください。</p>
       <div id="checkedItems"></div>
       <div id="textItems"></div>
-
       <div id="aiArea">
         <h2>③ AIで報告書を作成</h2>
         <p>AIは入力内容を整理し、情報が不足している場合は必要な確認質問をします。質問は必要な場合のみ、最大10問までです。</p>
@@ -105,7 +61,6 @@
       </div>
     </section>
   </main>
-
-  <script src="/app.js?v=20260916-25"></script>
+  <script src="/app.js?v=20260916-26"></script>
 </body>
 </html>
