@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>事故報告書AI ver.0.2.11</title>
+  <title>事故報告書AI ver.0.2.12</title>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   <style>
     .intro-notes p { margin: 4px 0; }
@@ -25,7 +25,7 @@
 </head>
 <body>
   <main>
-    <h1>事故報告書AI ver.0.2.11</h1>
+    <h1>事故報告書AI ver.0.2.12</h1>
     <div class="intro-notes">
       <p>■Excelを読み込み、内容を確認してから、AIで報告内容を整理します。</p>
       <p>■元のエクセルファイルの書式は変更しないでください。正しく読み込めません。</p>
@@ -56,7 +56,7 @@
       </div>
     </section>
   </main>
-  <script src="/app.js?v=20260916-32"></script>
+  <script src="/app.js?v=20260916-33"></script>
   <script>
     // 作業STEP（1～3）と、AI内部の5項目を混同しないよう、AI側の丸数字を表示しない。
     const cleanAiLabels = () => {
@@ -66,11 +66,17 @@
       const nodes = [];
       while (walker.nextNode()) nodes.push(walker.currentNode);
       nodes.forEach(node => {
-        node.nodeValue = node.nodeValue.replace(/^[①②③④⑤]\s*/, '').replace(/①〜⑤の整理が完了しました。/, '全5項目の整理が完了しました。');
+        const cleaned = node.nodeValue
+          .replace(/^[①②③④⑤]\s*/, '')
+          .replace(/①〜⑤の整理が完了しました。/, '全5項目の整理が完了しました。');
+        if (cleaned !== node.nodeValue) node.nodeValue = cleaned;
       });
     };
-    new MutationObserver(cleanAiLabels).observe(document.getElementById('aiArea'), { childList: true, subtree: true, characterData: true });
-    cleanAiLabels();
+    const aiArea = document.getElementById('aiArea');
+    if (aiArea) {
+      new MutationObserver(cleanAiLabels).observe(aiArea, { childList: true, subtree: true, characterData: true });
+      cleanAiLabels();
+    }
   </script>
 </body>
 </html>
