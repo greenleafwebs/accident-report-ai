@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>事故報告書AI ver.0.2.13</title>
+  <title>事故報告書AI ver.0.2.14</title>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   <style>
     .intro-notes p { margin: 4px 0; }
@@ -21,11 +21,24 @@
     .draft-box { padding: 12px; border: 1px solid #cfcfcf; border-radius: 6px; background: #fff; }
     .draft-actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
     .draft-edit { width: 100%; box-sizing: border-box; padding: 10px; font: inherit; line-height: 1.5; }
+    .progress { display: flex; align-items: center; gap: 6px; margin: 16px 0 24px; font-size: 14px; }
+    .progress-step { padding: 6px 10px; border-radius: 999px; background: #eee; white-space: nowrap; }
+    .progress-step.active { font-weight: 700; background: #d8f0f3; }
+    .progress-step.done { background: #e8f4e8; }
+    .progress-arrow { color: #888; }
+    .ai-progress { display: flex; gap: 6px; margin: 12px 0 20px; flex-wrap: wrap; }
+    .ai-progress-step { padding: 5px 10px; border-radius: 999px; background: #eee; font-size: 13px; }
+    .ai-progress-step.active { font-weight: 700; background: #d8f0f3; }
+    .ai-progress-step.done { background: #e8f4e8; }
+    .step-nav { display: flex; justify-content: space-between; gap: 10px; margin-top: 24px; }
+    .step-nav button { min-width: 100px; padding: 8px 16px; font: inherit; }
+    .step-panel[hidden] { display: none; }
+    #aiNextInternal { display: none; }
   </style>
 </head>
 <body>
   <main>
-    <h1>事故報告書AI ver.0.2.13</h1>
+    <h1>事故報告書AI ver.0.2.14</h1>
     <div class="intro-notes">
       <p>■Excelを読み込み、内容を確認してから、AIで報告内容を整理します。</p>
       <p>■元のエクセルファイルの書式は変更しないでください。正しく読み込めません。</p>
@@ -33,30 +46,153 @@
       <p>■内容には不正確な情報や誤りが含まれる可能性があります。</p>
       <p>■最終的な内容や対策については、必ず内容を確認してください。</p>
     </div>
-    <section>
+
+    <div id="mainProgress" class="progress" hidden>
+      <span id="progress1" class="progress-step active">STEP 1</span>
+      <span class="progress-arrow">→</span>
+      <span id="progress2" class="progress-step">STEP 2</span>
+      <span class="progress-arrow">→</span>
+      <span id="progress3" class="progress-step">STEP 3</span>
+    </div>
+
+    <section id="step1Panel" class="step-panel">
       <h2>STEP 1　Excelを選択</h2>
       <label id="excelFileLabel" for="excelFile">ファイルを選択</label>
       <input id="excelFile" type="file" accept=".xlsx,.xls">
       <div id="selectedFileName"></div>
       <button id="readExcel" type="button">Excelを読み込む</button>
+      <p id="excelResult"></p>
     </section>
-    <section id="preview" hidden>
-      <h2>STEP 2　読み取り結果を確認</h2>
-      <p>読み込み内容に不備がある場合は、エクセルファイルを修正して、もう一度読み込んでください。</p>
-      <div id="checkedItems"></div>
-      <div id="textItems"></div>
-      <div id="aiArea">
+
+    <section id="preview" class="step-panel" hidden>
+      <div id="step2Panel">
+        <h2>STEP 2　読み取り結果を確認</h2>
+        <p>読み込み内容に不備がある場合は、エクセルファイルを修正して、もう一度読み込んでください。</p>
+        <div id="checkedItems"></div>
+        <div id="textItems"></div>
+        <div class="step-nav">
+          <button id="step2Back" type="button">戻る</button>
+          <button id="step2Next" type="button">次へ</button>
+        </div>
+      </div>
+
+      <div id="aiArea" hidden>
         <h2>STEP 3　AIで報告内容を整理</h2>
+        <div id="aiProgress" class="ai-progress"></div>
         <p>AIは項目ごとに内容を確認し、不足している情報がある場合だけ質問します。確定した内容を次の項目へ引き継ぎます。</p>
         <button id="aiCheck" type="button" disabled>🤖 発生時状況、事故内容の詳細を整理</button>
         <div id="questionArea"></div>
         <div id="draftResult"></div>
         <div id="aiResult"></div>
+        <div class="step-nav">
+          <button id="aiBack" type="button">戻る</button>
+          <button id="aiNext" type="button" disabled>次へ</button>
+        </div>
       </div>
     </section>
   </main>
+
   <script src="/app.js?v=20260916-34"></script>
   <script>
+    const aiStages = [
+      "① 発生時状況、事故内容の詳細",
+      "② 発生時の対応",
+      "③ 利用者の状況",
+      "④ 事故の原因分析",
+      "⑤ 再発防止策"
+    ];
+    let uiStage = 0;
+    let uiView = 1;
+    let aiCompleted = new Set();
+
+    const progress = document.getElementById('mainProgress');
+    const step1Panel = document.getElementById('step1Panel');
+    const step2Panel = document.getElementById('step2Panel');
+    const aiArea = document.getElementById('aiArea');
+    const step2Back = document.getElementById('step2Back');
+    const step2Next = document.getElementById('step2Next');
+    const aiBack = document.getElementById('aiBack');
+    const aiNext = document.getElementById('aiNext');
+    const aiCheckButton = document.getElementById('aiCheck');
+    const aiProgress = document.getElementById('aiProgress');
+    const draftResult = document.getElementById('draftResult');
+
+    function updateMainProgress() {
+      progress.hidden = false;
+      [1, 2, 3].forEach((n) => {
+        const el = document.getElementById(`progress${n}`);
+        el.classList.toggle('active', uiView === n);
+        el.classList.toggle('done', uiView > n);
+      });
+    }
+
+    function renderAiProgress() {
+      aiProgress.innerHTML = '';
+      aiStages.forEach((label, index) => {
+        const el = document.createElement('span');
+        el.className = 'ai-progress-step';
+        el.textContent = label.replace(/^[①②③④⑤]\s*/, '');
+        el.classList.toggle('active', index === uiStage);
+        el.classList.toggle('done', aiCompleted.has(index));
+        aiProgress.appendChild(el);
+      });
+    }
+
+    function showView(view) {
+      uiView = view;
+      step1Panel.hidden = view !== 1;
+      document.getElementById('preview').hidden = false;
+      step2Panel.hidden = view !== 2;
+      aiArea.hidden = view !== 3;
+      updateMainProgress();
+      if (view === 3) renderAiProgress();
+    }
+
+    function refreshAiNext() {
+      const internal = document.getElementById('aiNextInternal');
+      const hasConfirmed = internal && internal.dataset.ready === 'true';
+      aiNext.disabled = !hasConfirmed;
+    }
+
+    document.getElementById('readExcel').addEventListener('click', () => {
+      setTimeout(() => {
+        if (!document.getElementById('preview').hidden) showView(2);
+      }, 50);
+    });
+
+    step2Back.addEventListener('click', () => showView(1));
+    step2Next.addEventListener('click', () => {
+      uiStage = 0;
+      showView(3);
+      aiCheckButton.click();
+    });
+
+    aiBack.addEventListener('click', () => {
+      if (uiStage === 0) showView(2);
+      else {
+        uiStage -= 1;
+        startStage(uiStage);
+        renderAiProgress();
+        refreshAiNext();
+      }
+    });
+
+    aiNext.addEventListener('click', () => {
+      if (uiStage >= aiStages.length - 1) return;
+      uiStage += 1;
+      showView(3);
+      startStage(uiStage);
+      refreshAiNext();
+    });
+
+    const originalStartStage = window.startStage;
+    window.startStage = function(index) {
+      uiStage = index;
+      renderAiProgress();
+      if (typeof originalStartStage === 'function') originalStartStage(index);
+      refreshAiNext();
+    };
+
     const cleanAiLabels = () => {
       const root = document.getElementById('aiArea');
       if (!root) return;
@@ -70,11 +206,25 @@
         if (cleaned !== node.nodeValue) node.nodeValue = cleaned;
       });
     };
-    const aiArea = document.getElementById('aiArea');
-    if (aiArea) {
-      new MutationObserver(cleanAiLabels).observe(aiArea, { childList: true, subtree: true, characterData: true });
+
+    const observer = new MutationObserver(() => {
       cleanAiLabels();
-    }
+      const internal = document.querySelector('#draftResult button:not(.ai-action)');
+      const buttons = document.querySelectorAll('#draftResult button');
+      buttons.forEach((button) => {
+        if (button.textContent.includes('を整理する')) {
+          button.id = 'aiNextInternal';
+          button.dataset.ready = 'true';
+          button.style.display = 'none';
+          aiCompleted.add(uiStage);
+          renderAiProgress();
+          aiNext.disabled = uiStage >= aiStages.length - 1;
+        }
+      });
+      refreshAiNext();
+    });
+    observer.observe(aiArea, { childList: true, subtree: true, characterData: true });
+    cleanAiLabels();
   </script>
 </body>
 </html>
