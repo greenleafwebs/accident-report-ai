@@ -209,12 +209,9 @@ function updateStageStartControls(index) {
   aiCheck.disabled = false;
   aiCheck.textContent = `${stage.label}を整理する`;
 
-  const alreadyConfirmed = Boolean(confirmedSections[stage.label]);
   skipStageButton.hidden = false;
-  skipStageButton.disabled = !alreadyConfirmed;
-  skipStageButton.textContent = alreadyConfirmed
-    ? `${stage.label}をスキップ（確認済み）`
-    : `${stage.label}をスキップ（未確認）`;
+  skipStageButton.disabled = false;
+  skipStageButton.textContent = `${stage.label}をスキップして次へ`;
 }
 
 function startStage(index) {
@@ -259,7 +256,7 @@ function cancelStage(index) {
   completeStage(index, `${stage.label}をキャンセルしました。今回はこの項目をAIで整理せず、次へ進みます。`);
 }
 
-function renderConfirmedStagefunction renderConfirmedStage(stage, text) {
+function renderConfirmedStage(stage, text) {
   const stageBlock = document.createElement("section");
   stageBlock.className = "stage-result";
   const title = document.createElement("h3");
@@ -284,7 +281,7 @@ function completeStage(index, messageText = "") {
     aiResult.innerHTML = "";
     const message = document.createElement("p");
     message.textContent = messageText || `${title}を確認済みにしました。次は${stages[next].label}です。`;
-    const nextActions = document.createElement("div");    const nextActions = document.createElement("div");
+    const nextActions = document.createElement("div");
     nextActions.className = "draft-actions";
     const nextButton = document.createElement("button");
     nextButton.type = "button";
@@ -292,10 +289,8 @@ function completeStage(index, messageText = "") {
     nextButton.addEventListener("click", () => startStage(next));
     const skipButton = document.createElement("button");
     skipButton.type = "button";
-    skipButton.textContent = confirmedSections[stages[next].label]
-      ? `${stages[next].label}をスキップ（確認済み）`
-      : `${stages[next].label}をスキップ（未確認）`;
-    skipButton.disabled = !confirmedSections[stages[next].label];
+    skipButton.textContent = `${stages[next].label}をスキップして次へ`;
+    skipButton.disabled = false;
     skipButton.addEventListener("click", () => skipStage(next));
     nextActions.append(nextButton, skipButton);
     aiResult.append(message, nextActions);
@@ -317,6 +312,10 @@ async function requestAi(stage, round, answers) {
     });
     const body = await response.json();
     if (!response.ok || !body.success) throw new Error(body.error || "AI処理に失敗しました");
+    isAiProcessing = false;
+    aiAbortController = null;
+    aiCheck.hidden = true;
+    aiCheck.disabled = true;
     if (body.questions?.length) {
       renderQuestions(body.questions, stage);
       aiResult.textContent = "";
