@@ -80,6 +80,7 @@ readExcel.addEventListener("click", async () => {
     preview.hidden = false;
     preview.open = true;
     aiArea.hidden = false;
+    aiCheck.hidden = false;
     aiCheck.disabled = selected.length === 0 && texts.length === 0;
     excelResult.textContent = `読み込み完了：${workbook.SheetNames.length}シート`;
   } catch (error) {
@@ -174,6 +175,7 @@ function startStage(index) {
   aiResult.textContent = "";
   const stage = stages[index];
   aiCheck.disabled = true;
+  aiCheck.hidden = true;
   aiCheck.textContent = `${stage.label}を整理中…`;
   requestAi(stage.key, 0, []).finally(() => {
     aiCheck.disabled = false;
@@ -202,6 +204,11 @@ async function requestAi(stage, round, answers) {
     }
   } catch (error) {
     aiResult.textContent = `AI処理エラー：${error.message}`;
+    const retryButton = document.createElement("button");
+    retryButton.type = "button";
+    retryButton.textContent = `${stages.find((item) => item.key === stage)?.label || stage}を整理する`;
+    retryButton.addEventListener("click", () => startStage(currentStageIndex));
+    aiResult.appendChild(retryButton);
   }
 }
 
