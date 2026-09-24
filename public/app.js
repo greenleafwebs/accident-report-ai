@@ -180,6 +180,7 @@ function startStage(index) {
 
 async function requestAi(stage, round, answers) {
   aiResult.textContent = "AIが確認・作成中…";
+  aiResult.scrollIntoView({ behavior: "smooth", block: "center" });
   questionArea.innerHTML = "";
   try {
     const response = await fetch("/api/ai-check", {
