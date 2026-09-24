@@ -8,7 +8,7 @@
   <style>
     .intro-notes p { margin: 4px 0; }
     #excelFile { display: none; }
-    #excelFileLabel, #readExcel { display: inline-block; box-sizing: border-box; width: 150px; padding: 6px 12px; border: 1px solid #999; border-radius: 4px; background: #f3f3f3; cursor: pointer; text-align: center; font: inherit; }
+    button, #excelFileLabel { display: inline-block; box-sizing: border-box; width: 150px; min-height: 34px; padding: 6px 12px; border: 1px solid #999; border-radius: 4px; background: #f3f3f3; cursor: pointer; text-align: center; font: inherit; }
     .file-select-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
     #selectedFileName { overflow-wrap: anywhere; word-break: break-all; }
     .read-item { margin: 4px 0; }
@@ -20,14 +20,15 @@
     .question-card label { display: block; margin: 7px 0; }
     .question-other { display: inline-block; margin-left: 6px; width: min(320px, 70%); box-sizing: border-box; padding: 7px; }
     .draft-box { padding: 12px; border: 1px solid #cfcfcf; border-radius: 6px; background: #fff; }
-    .draft-actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
     .draft-edit { width: 100%; box-sizing: border-box; padding: 10px; font: inherit; line-height: 1.5; }
     .ai-progress { display: flex; gap: 6px; margin: 12px 0 20px; flex-wrap: wrap; }
     .ai-progress-step { padding: 5px 10px; border-radius: 999px; background: #eee; font-size: 13px; }
     .ai-progress-step.active { font-weight: 700; background: #d8f0f3; }
     .ai-progress-step.done { background: #e8f4e8; }
     .step2-actions { margin-top: 20px; }
-    .step-nav button { min-width: 100px; padding: 8px 16px; font: inherit; }
+    .stage-result { margin-bottom: 24px; }
+    .stage-result h3 { margin-bottom: 8px; }
+    .draft-actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
     details { margin: 14px 0; border: 1px solid #ddd; border-radius: 6px; padding: 0 12px; background: #fff; }
     details > summary { cursor: pointer; padding: 12px 0; font-weight: 700; }
     details[hidden] { display: none; }
@@ -71,13 +72,9 @@
       <div id="questionArea"></div>
       <div id="draftResult"></div>
       <div id="aiResult"></div>
-      <div class="step-nav">
-        <button id="aiBack" type="button">戻る</button>
-        <button id="aiNext" type="button" disabled>次へ</button>
-      </div>
     </section>
   </main>
 
-  <script src="/app.js?v=20260916-38"></script>
+  <script src="/app.js?v=20260924-39"></script>
 </body>
 </html>
