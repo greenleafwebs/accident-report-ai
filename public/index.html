@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>事故報告書AI ver.0.2.27</title>
+  <title>事故報告書AI ver.0.2.28</title>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   <style>
     .intro-notes p { margin: 4px 0; }
@@ -68,13 +68,16 @@
       <h2>STEP 3　AIで報告内容を整理</h2>
       <div id="aiProgress" class="ai-progress"></div>
       <p>AIは項目ごとに内容を確認し、不足している情報がある場合だけ質問します。確定した内容を次の項目へ引き継ぎます。</p>
-      <button id="aiCheck" type="button" disabled>🤖 発生時状況、事故内容の詳細を整理</button>
+      <div class="draft-actions">
+        <button id="aiCheck" type="button" disabled>🤖 発生時状況、事故内容の詳細を整理</button>
+        <button id="skipStage" type="button" disabled>スキップ（未確認）</button>
+      </div>
       <div id="questionArea"></div>
       <div id="draftResult"></div>
       <div id="aiResult"></div>
     </section>
   </main>
 
-  <script src="/app.js?v=20260924-43"></script>
+  <script src="/app.js?v=20260924-44"></script>
 </body>
 </html>
