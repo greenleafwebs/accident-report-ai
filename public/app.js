@@ -175,7 +175,10 @@ function startStage(index) {
   const stage = stages[index];
   aiCheck.disabled = true;
   aiCheck.textContent = `${stage.label}を整理中…`;
-  requestAi(stage.key, 0, []).finally(() => { aiCheck.disabled = false; });
+  requestAi(stage.key, 0, []).finally(() => {
+    aiCheck.disabled = false;
+    aiCheck.textContent = `${stage.label}を整理する`;
+  });
 }
 
 async function requestAi(stage, round, answers) {
