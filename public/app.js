@@ -171,7 +171,6 @@ function startStage(index) {
   currentStageIndex = index;
   currentRound = 0;
   questionArea.innerHTML = "";
-  draftResult.innerHTML = "";
   aiResult.textContent = "";
   const stage = stages[index];
   aiCheck.disabled = true;
@@ -182,7 +181,6 @@ function startStage(index) {
 async function requestAi(stage, round, answers) {
   aiResult.textContent = "AIが確認・作成中…";
   questionArea.innerHTML = "";
-  draftResult.innerHTML = "";
   try {
     const response = await fetch("/api/ai-check", {
       method: "POST",
@@ -259,12 +257,14 @@ function renderQuestions(questions, stage) {
 }
 
 function renderDraft(stage, text) {
+  const stageBlock = document.createElement("section");
+  stageBlock.className = "stage-result";
   const title = document.createElement("h3");
   title.textContent = stages.find((item) => item.key === stage)?.label || stage;
   const box = document.createElement("div");
   box.className = "draft-box";
   box.textContent = text;
-  draftResult.append(title, box);
+  stageBlock.append(title, box);
 
   const actions = document.createElement("div");
   actions.className = "draft-actions";
@@ -281,12 +281,14 @@ function renderDraft(stage, text) {
     edit.disabled = true;
     const next = currentStageIndex + 1;
     if (next < stages.length) {
-      aiResult.textContent = `${title.textContent}をOKにしました。次は${stages[next].label}です。`;
+      aiResult.innerHTML = "";
+      const message = document.createElement("p");
+      message.textContent = `${title.textContent}をOKにしました。次は${stages[next].label}です。`;
       const nextButton = document.createElement("button");
       nextButton.type = "button";
       nextButton.textContent = `${stages[next].label}を整理する`;
       nextButton.addEventListener("click", () => startStage(next));
-      draftResult.appendChild(nextButton);
+      aiResult.append(message, nextButton);
     } else {
       aiResult.textContent = "①〜⑤の整理が完了しました。内容を確認してから最終的な報告書として使用してください。";
     }
@@ -314,7 +316,8 @@ function renderDraft(stage, text) {
     edit.disabled = true;
   });
   actions.append(ok, edit);
-  draftResult.appendChild(actions);
+  stageBlock.appendChild(actions);
+  draftResult.appendChild(stageBlock);
 }
 
 if (form) {
