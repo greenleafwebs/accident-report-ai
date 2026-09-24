@@ -204,6 +204,7 @@ async function requestAi(stage, round, answers) {
     }
   } catch (error) {
     aiResult.textContent = `AI処理エラー：${error.message}`;
+    aiResult.appendChild(document.createElement("br"));
     const retryButton = document.createElement("button");
     retryButton.type = "button";
     retryButton.textContent = `${stages.find((item) => item.key === stage)?.label || stage}を整理する`;
