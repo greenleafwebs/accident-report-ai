@@ -9,6 +9,7 @@ const aiArea = document.getElementById("aiArea");
 const checkedItems = document.getElementById("checkedItems");
 const textItems = document.getElementById("textItems");
 const aiCheck = document.getElementById("aiCheck");
+const skipStageButton = document.getElementById("skipStage");
 const aiResult = document.getElementById("aiResult");
 const questionArea = document.getElementById("questionArea");
 const draftResult = document.getElementById("draftResult");
@@ -28,6 +29,8 @@ let latestTexts = [];
 let currentStageIndex = 0;
 let currentRound = 0;
 let confirmedSections = {};
+let completedStageIndexes = new Set();
+let reportStorageKey = "";
 
 excelFile.addEventListener("change", () => {
   const file = excelFile.files[0];
@@ -47,9 +50,12 @@ readExcel.addEventListener("click", async () => {
   preview.hidden = true;
   aiArea.hidden = true;
   preview.open = true;
-  confirmedSections = {};
   currentStageIndex = 0;
   currentRound = 0;
+  completedStageIndexes = new Set();
+  reportStorageKey = `accident-report-ai:${file.name}:${file.size}:${file.lastModified}`;
+  const saved = loadSavedProgress(reportStorageKey);
+  confirmedSections = saved.confirmedSections || {};
   try {
     const buffer = await file.arrayBuffer();
     const workbook = XLSX.read(buffer, { type: "array" });
@@ -82,7 +88,10 @@ readExcel.addEventListener("click", async () => {
     aiArea.hidden = false;
     aiCheck.hidden = false;
     aiCheck.disabled = selected.length === 0 && texts.length === 0;
-    excelResult.textContent = `読み込み完了：${workbook.SheetNames.length}シート`;
+    updateStageStartControls(0);
+    excelResult.textContent = saved.confirmedSections
+      ? `読み込み完了：${workbook.SheetNames.length}シート（確認済み内容あり）`
+      : `読み込み完了：${workbook.SheetNames.length}シート`;
   } catch (error) {
     excelResult.textContent = `読み込みエラー：${error.message}`;
   }
@@ -167,6 +176,41 @@ function renderReadOnlyFields(container, items) {
 }
 
 aiCheck.addEventListener("click", () => startStage(0));
+skipStageButton.addEventListener("click", () => skipStage(currentStageIndex));
+
+function loadSavedProgress(key) {
+  if (!key) return {};
+  try {
+    const saved = JSON.parse(localStorage.getItem(key) || "{}");
+    return saved && typeof saved === "object" ? saved : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveProgress() {
+  if (!reportStorageKey) return;
+  try {
+    localStorage.setItem(reportStorageKey, JSON.stringify({ confirmedSections }));
+  } catch {
+    // 保存できない環境でも通常処理は継続する
+  }
+}
+
+function updateStageStartControls(index) {
+  currentStageIndex = index;
+  const stage = stages[index];
+  aiCheck.hidden = false;
+  aiCheck.disabled = false;
+  aiCheck.textContent = `${stage.label}を整理する`;
+
+  const alreadyConfirmed = Boolean(confirmedSections[stage.label]);
+  skipStageButton.hidden = false;
+  skipStageButton.disabled = !alreadyConfirmed;
+  skipStageButton.textContent = alreadyConfirmed
+    ? `${stage.label}をスキップ（確認済み）`
+    : `${stage.label}をスキップ（未確認）`;
+}
 
 function startStage(index) {
   currentStageIndex = index;
@@ -176,11 +220,66 @@ function startStage(index) {
   const stage = stages[index];
   aiCheck.disabled = true;
   aiCheck.hidden = true;
+  skipStageButton.hidden = true;
   aiCheck.textContent = `${stage.label}を整理中…`;
   requestAi(stage.key, 0, []).finally(() => {
     aiCheck.disabled = false;
     aiCheck.textContent = `${stage.label}を整理する`;
   });
+}
+
+function skipStage(index) {
+  const stage = stages[index];
+  const confirmed = confirmedSections[stage.label];
+  if (!confirmed || completedStageIndexes.has(index)) return;
+
+  questionArea.innerHTML = "";
+  aiResult.textContent = "";
+  renderConfirmedStage(stage, confirmed);
+  completeStage(index);
+}
+
+function renderConfirmedStage(stage, text) {
+  const stageBlock = document.createElement("section");
+  stageBlock.className = "stage-result";
+  const title = document.createElement("h3");
+  title.textContent = stage.label;
+  const status = document.createElement("p");
+  status.textContent = "確認済みの内容を引き継ぎました。";
+  const box = document.createElement("div");
+  box.className = "draft-box";
+  box.textContent = text;
+  stageBlock.append(title, status, box);
+  draftResult.appendChild(stageBlock);
+}
+
+function completeStage(index) {
+  if (completedStageIndexes.has(index)) return;
+  completedStageIndexes.add(index);
+  const next = index + 1;
+  const title = stages[index].label;
+  if (next < stages.length) {
+    aiResult.innerHTML = "";
+    const message = document.createElement("p");
+    message.textContent = `${title}を確認済みにしました。次は${stages[next].label}です。`;
+    const nextActions = document.createElement("div");
+    nextActions.className = "draft-actions";
+    const nextButton = document.createElement("button");
+    nextButton.type = "button";
+    nextButton.textContent = `${stages[next].label}を整理する`;
+    nextButton.addEventListener("click", () => startStage(next));
+    const skipButton = document.createElement("button");
+    skipButton.type = "button";
+    skipButton.textContent = confirmedSections[stages[next].label]
+      ? `${stages[next].label}をスキップ（確認済み）`
+      : `${stages[next].label}をスキップ（未確認）`;
+    skipButton.disabled = !confirmedSections[stages[next].label];
+    skipButton.addEventListener("click", () => skipStage(next));
+    nextActions.append(nextButton, skipButton);
+    aiResult.append(message, nextActions);
+  } else {
+    aiResult.textContent = "①〜⑤の整理が完了しました。内容を確認してから最終的な報告書として使用してください。";
+  }
 }
 
 async function requestAi(stage, round, answers) {
@@ -289,21 +388,12 @@ function renderDraft(stage, text) {
 
   const confirm = (value) => {
     confirmedSections[title.textContent] = value;
+    saveProgress();
     ok.disabled = true;
     edit.disabled = true;
-    const next = currentStageIndex + 1;
-    if (next < stages.length) {
-      aiResult.innerHTML = "";
-      const message = document.createElement("p");
-      message.textContent = `${title.textContent}をOKにしました。次は${stages[next].label}です。`;
-      const nextButton = document.createElement("button");
-      nextButton.type = "button";
-      nextButton.textContent = `${stages[next].label}を整理する`;
-      nextButton.addEventListener("click", () => startStage(next));
-      aiResult.append(message, nextButton);
-    } else {
-      aiResult.textContent = "①〜⑤の整理が完了しました。内容を確認してから最終的な報告書として使用してください。";
-    }
+    aiCheck.hidden = true;
+    skipStageButton.hidden = true;
+    completeStage(currentStageIndex);
   };
 
   ok.addEventListener("click", () => confirm(text));
