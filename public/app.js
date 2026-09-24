@@ -31,6 +31,8 @@ let currentRound = 0;
 let confirmedSections = {};
 let completedStageIndexes = new Set();
 let reportStorageKey = "";
+let aiAbortController = null;
+let isAiProcessing = false;
 
 excelFile.addEventListener("change", () => {
   const file = excelFile.files[0];
@@ -175,7 +177,10 @@ function renderReadOnlyFields(container, items) {
   });
 }
 
-aiCheck.addEventListener("click", () => startStage(0));
+aiCheck.addEventListener("click", () => {
+  if (isAiProcessing) { cancelStage(currentStageIndex); return; }
+  startStage(currentStageIndex);
+});
 skipStageButton.addEventListener("click", () => skipStage(currentStageIndex));
 
 function loadSavedProgress(key) {
@@ -218,28 +223,43 @@ function startStage(index) {
   questionArea.innerHTML = "";
   aiResult.textContent = "";
   const stage = stages[index];
-  aiCheck.disabled = true;
-  aiCheck.hidden = true;
+  isAiProcessing = true;
+  aiAbortController = new AbortController();
+  aiCheck.disabled = false;
+  aiCheck.hidden = false;
+  aiCheck.textContent = `${stage.label}をキャンセルして次へ`;
   skipStageButton.hidden = true;
-  aiCheck.textContent = `${stage.label}を整理中…`;
-  requestAi(stage.key, 0, []).finally(() => {
-    aiCheck.disabled = false;
-    aiCheck.textContent = `${stage.label}を整理する`;
-  });
+  requestAi(stage.key, 0, []);
 }
 
 function skipStage(index) {
   const stage = stages[index];
-  const confirmed = confirmedSections[stage.label];
-  if (!confirmed || completedStageIndexes.has(index)) return;
-
+  if (completedStageIndexes.has(index)) return;
   questionArea.innerHTML = "";
   aiResult.textContent = "";
-  renderConfirmedStage(stage, confirmed);
-  completeStage(index);
+  if (confirmedSections[stage.label]) {
+    renderConfirmedStage(stage, confirmedSections[stage.label]);
+    completeStage(index, `${stage.label}をスキップしました。確認済みの内容を引き継ぎます。`);
+  } else {
+    completeStage(index, `${stage.label}をスキップしました。今回はこの項目をAIで整理せず、次へ進みます。`);
+  }
 }
 
-function renderConfirmedStage(stage, text) {
+function cancelStage(index) {
+  if (!isAiProcessing || completedStageIndexes.has(index)) return;
+  const stage = stages[index];
+  isAiProcessing = false;
+  if (aiAbortController) aiAbortController.abort();
+  aiAbortController = null;
+  questionArea.innerHTML = "";
+  aiResult.textContent = "";
+  aiCheck.hidden = true;
+  aiCheck.disabled = true;
+  skipStageButton.hidden = true;
+  completeStage(index, `${stage.label}をキャンセルしました。今回はこの項目をAIで整理せず、次へ進みます。`);
+}
+
+function renderConfirmedStagefunction renderConfirmedStage(stage, text) {
   const stageBlock = document.createElement("section");
   stageBlock.className = "stage-result";
   const title = document.createElement("h3");
@@ -253,16 +273,18 @@ function renderConfirmedStage(stage, text) {
   draftResult.appendChild(stageBlock);
 }
 
-function completeStage(index) {
+function completeStage(index, messageText = "") {
   if (completedStageIndexes.has(index)) return;
   completedStageIndexes.add(index);
+  isAiProcessing = false;
+  aiAbortController = null;
   const next = index + 1;
   const title = stages[index].label;
   if (next < stages.length) {
     aiResult.innerHTML = "";
     const message = document.createElement("p");
-    message.textContent = `${title}を確認済みにしました。次は${stages[next].label}です。`;
-    const nextActions = document.createElement("div");
+    message.textContent = messageText || `${title}を確認済みにしました。次は${stages[next].label}です。`;
+    const nextActions = document.createElement("div");    const nextActions = document.createElement("div");
     nextActions.className = "draft-actions";
     const nextButton = document.createElement("button");
     nextButton.type = "button";
@@ -290,7 +312,8 @@ async function requestAi(stage, round, answers) {
     const response = await fetch("/api/ai-check", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ selected: latestSelected, texts: latestTexts, answers, confirmed: confirmedSections, stage, round })
+      body: JSON.stringify({ selected: latestSelected, texts: latestTexts, answers, confirmed: confirmedSections, stage, round }),
+      signal: aiAbortController?.signal
     });
     const body = await response.json();
     if (!response.ok || !body.success) throw new Error(body.error || "AI処理に失敗しました");
@@ -302,6 +325,9 @@ async function requestAi(stage, round, answers) {
       aiResult.textContent = "内容を確認してください。";
     }
   } catch (error) {
+    if (error.name === "AbortError") return;
+    isAiProcessing = false;
+    aiAbortController = null;
     aiResult.textContent = `AI処理エラー：${error.message}`;
     aiResult.appendChild(document.createElement("br"));
     const retryButton = document.createElement("button");
@@ -309,6 +335,14 @@ async function requestAi(stage, round, answers) {
     retryButton.textContent = `${stages.find((item) => item.key === stage)?.label || stage}を整理する`;
     retryButton.addEventListener("click", () => startStage(currentStageIndex));
     aiResult.appendChild(retryButton);
+    const cancelButton = document.createElement("button");
+    cancelButton.type = "button";
+    cancelButton.textContent = `${stages.find((item) => item.key === stage)?.label || stage}をキャンセルして次へ`;
+    cancelButton.addEventListener("click", () => {
+      completeStage(currentStageIndex, `${stages[currentStageIndex].label}をキャンセルしました。今回はこの項目をAIで整理せず、次へ進みます。`);
+    });
+    aiResult.appendChild(document.createElement("br"));
+    aiResult.appendChild(cancelButton);
   }
 }
 
@@ -362,6 +396,8 @@ function renderQuestions(questions, stage) {
     });
     if (answers.some((item) => !item.answer)) { aiResult.textContent = "未回答の質問があります。必要な質問に回答してください。"; return; }
     currentRound = 1;
+    aiAbortController = new AbortController();
+    isAiProcessing = true;
     await requestAi(stage, 1, answers);
   });
   questionArea.appendChild(submit);
