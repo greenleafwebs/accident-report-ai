@@ -12,7 +12,6 @@ const aiCheck = document.getElementById("aiCheck");
 const skipStageButton = document.getElementById("skipStage");
 const aiResult = document.getElementById("aiResult");
 const questionArea = document.getElementById("questionArea");
-const draftResult = document.getElementById("draftResult");
 
 const selectionFields = ["第○報","事故状況の程度","要介護度","認知症高齢者日常生活自立度","発生場所","事故の種別","受診方法","診断内容","連絡した関係機関 (連絡した場合のみ)"];
 const textFields = ["発生日時","発生時状況、事故内容の詳細","発生時の対応","医療機関名","診断名","検査、処置等の概要","利用者の状況","本人、家族、関係先等への追加対応予定","原因分析","再発防止策","その他"];
@@ -33,6 +32,7 @@ let completedStageIndexes = new Set();
 let reportStorageKey = "";
 let aiAbortController = null;
 let isAiProcessing = false;
+let currentStageBlock = null;
 
 excelFile.addEventListener("change", () => {
   const file = excelFile.files[0];
@@ -220,6 +220,9 @@ function startStage(index) {
   questionArea.innerHTML = "";
   aiResult.textContent = "";
   const stage = stages[index];
+  currentStageBlock = document.createElement("section");
+  currentStageBlock.className = "stage-result";
+  questionArea.appendChild(currentStageBlock);
   isAiProcessing = true;
   aiAbortController = new AbortController();
   aiCheck.disabled = false;
@@ -267,7 +270,7 @@ function renderConfirmedStage(stage, text) {
   box.className = "draft-box";
   box.textContent = text;
   stageBlock.append(title, status, box);
-  draftResult.appendChild(stageBlock);
+  questionArea.appendChild(stageBlock);
 }
 
 function completeStage(index, messageText = "") {
@@ -348,7 +351,7 @@ async function requestAi(stage, round, answers) {
 function renderQuestions(questions, stage) {
   const title = document.createElement("h3");
   title.textContent = `確認質問（${questions.length}問）`;
-  questionArea.appendChild(title);
+  currentStageBlock.appendChild(title);
   questions.forEach((question, index) => {
     const card = document.createElement("div");
     card.className = "question-card";
@@ -379,7 +382,7 @@ function renderQuestions(questions, stage) {
       label.append(radio, " その他：", input);
       card.appendChild(label);
     }
-    questionArea.appendChild(card);
+    currentStageBlock.appendChild(card);
   });
   const submit = document.createElement("button");
   submit.type = "button";
@@ -399,14 +402,14 @@ function renderQuestions(questions, stage) {
     isAiProcessing = true;
     await requestAi(stage, 1, answers);
   });
-  questionArea.appendChild(submit);
+  currentStageBlock.appendChild(submit);
 }
 
 function renderDraft(stage, text) {
   const stageBlock = document.createElement("section");
-  stageBlock.className = "stage-result";
+  stageBlock.className = "draft-result-block";
   const title = document.createElement("h3");
-  title.textContent = stages.find((item) => item.key === stage)?.label || stage;
+  title.textContent = "AIが作成した文章";
   const box = document.createElement("div");
   box.className = "draft-box";
   box.textContent = text;
