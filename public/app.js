@@ -46,7 +46,6 @@ readExcel.addEventListener("click", async () => {
   checkedItems.innerHTML = "";
   textItems.innerHTML = "";
   questionArea.innerHTML = "";
-  draftResult.innerHTML = "";
   aiResult.textContent = "";
   aiCheck.disabled = true;
   preview.hidden = true;
