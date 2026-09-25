@@ -33,6 +33,8 @@ let reportStorageKey = "";
 let aiAbortController = null;
 let isAiProcessing = false;
 let currentStageBlock = null;
+let originalWorkbook = null;
+let originalFileName = "";
 
 excelFile.addEventListener("change", () => {
   const file = excelFile.files[0];
@@ -59,7 +61,9 @@ readExcel.addEventListener("click", async () => {
   confirmedSections = saved.confirmedSections || {};
   try {
     const buffer = await file.arrayBuffer();
-    const workbook = XLSX.read(buffer, { type: "array" });
+    const workbook = XLSX.read(buffer, { type: "array", cellStyles: true });
+    originalWorkbook = workbook;
+    originalFileName = file.name;
     const selected = [];
     const texts = [];
     for (const sheetName of workbook.SheetNames) {
@@ -297,7 +301,14 @@ function completeStage(index, messageText = "") {
     nextActions.append(nextButton, skipButton);
     aiResult.append(message, nextActions);
   } else {
-    aiResult.textContent = "①〜⑤の整理が完了しました。内容を確認してから最終的な報告書として使用してください。";
+    aiResult.innerHTML = "";
+    const message = document.createElement("p");
+    message.textContent = "①〜⑤の整理が完了しました。内容を確認してから最終的な報告書として使用してください。";
+    const downloadButton = document.createElement("button");
+    downloadButton.type = "button";
+    downloadButton.textContent = "📥 完成したExcelをダウンロード";
+    downloadButton.addEventListener("click", downloadCompletedExcel);
+    aiResult.append(message, downloadButton);
   }
 }
 
@@ -345,6 +356,40 @@ async function requestAi(stage, round, answers) {
     aiResult.appendChild(document.createElement("br"));
     aiResult.appendChild(cancelButton);
   }
+}
+
+function downloadCompletedExcel() {
+  if (!originalWorkbook) {
+    aiResult.textContent = "元のExcelファイルが見つかりません。もう一度Excelを読み込んでください。";
+    return;
+  }
+
+  const sheet = originalWorkbook.Sheets["事故報告"];
+  if (!sheet) {
+    aiResult.textContent = "「事故報告」シートが見つかりません。";
+    return;
+  }
+
+  const targets = {
+    "① 発生時状況、事故内容の詳細": "D29",
+    "② 発生時の対応": "D31",
+    "③ 利用者の状況": "D38",
+    "④ 事故の原因分析": "E44",
+    "⑤ 再発防止策": "E46"
+  };
+
+  Object.entries(targets).forEach(([stageLabel, cellAddress]) => {
+    if (!Object.prototype.hasOwnProperty.call(confirmedSections, stageLabel)) return;
+    const value = String(confirmedSections[stageLabel] ?? "").trim();
+    if (!value) return;
+    const currentCell = sheet[cellAddress] || {};
+    sheet[cellAddress] = { ...currentCell, t: "s", v: value };
+  });
+
+  const baseName = originalFileName.replace(/\.[^.]+$/, "") || "事故報告書";
+  const outputName = baseName + "_完成版.xlsx";
+  XLSX.writeFile(originalWorkbook, outputName, { bookType: "xlsx" });
+  aiResult.textContent = "完成したExcelをダウンロードしました。行の高さや印刷範囲などは必要に応じてExcel側で調整してください。";
 }
 
 function renderQuestions(questions, stage) {
