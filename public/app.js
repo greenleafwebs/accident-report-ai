@@ -217,7 +217,7 @@ function updateStageStartControls(index) {
 function startStage(index) {
   currentStageIndex = index;
   currentRound = 0;
-  questionArea.innerHTML = "";
+  // 途中のやりとりは履歴として残すため、ここでは消去しない
   aiResult.textContent = "";
   const stage = stages[index];
   currentStageBlock = document.createElement("section");
@@ -235,7 +235,7 @@ function startStage(index) {
 function skipStage(index) {
   const stage = stages[index];
   if (completedStageIndexes.has(index)) return;
-  questionArea.innerHTML = "";
+  // 途中のやりとりは履歴として残すため、ここでは消去しない
   aiResult.textContent = "";
   if (confirmedSections[stage.label]) {
     renderConfirmedStage(stage, confirmedSections[stage.label]);
@@ -251,7 +251,7 @@ function cancelStage(index) {
   isAiProcessing = false;
   if (aiAbortController) aiAbortController.abort();
   aiAbortController = null;
-  questionArea.innerHTML = "";
+  // 途中のやりとりは履歴として残すため、ここでは消去しない
   aiResult.textContent = "";
   aiCheck.hidden = true;
   aiCheck.disabled = true;
@@ -305,7 +305,7 @@ function completeStage(index, messageText = "") {
 async function requestAi(stage, round, answers) {
   aiResult.textContent = "AIが確認・作成中…";
   aiResult.scrollIntoView({ behavior: "smooth", block: "center" });
-  questionArea.innerHTML = "";
+  // 途中のやりとりは履歴として残すため、ここでは消去しない
   try {
     const response = await fetch("/api/ai-check", {
       method: "POST",
