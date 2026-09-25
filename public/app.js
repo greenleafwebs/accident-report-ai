@@ -388,7 +388,7 @@ function renderQuestions(questions, stage) {
   submit.textContent = "回答して文章を作成";
   submit.addEventListener("click", async () => {
     const answers = [];
-    document.querySelectorAll(".question-card").forEach((card, index) => {
+    currentStageBlock.querySelectorAll(".question-card").forEach((card, index) => {
       const selected = card.querySelector(`input[name="question-${index}"]:checked`);
       const other = card.querySelector("[data-other='true']");
       let value = selected?.value || "";
