@@ -456,7 +456,7 @@ function renderDraft(stage, text) {
   });
   actions.append(ok, edit);
   stageBlock.appendChild(actions);
-  draftResult.appendChild(stageBlock);
+  currentStageBlock.appendChild(stageBlock);
 }
 
 if (form) {
