@@ -73,12 +73,32 @@ export default {
 
         const prompt = `あなたは介護施設の事故報告書を整理する補助AIです。\n\n今回は「${info.title}」を扱います。\n目的：${info.purpose}\n\n【確認・整理する観点】\n${info.points.map((point, index) => `${index + 1}. ${point}`).join("\n")}\n\n【重要】\n・${info.ask}\n・Excelの記載内容と、今回の回答、すでに確定した内容だけを材料にしてください。\n・要介護度、認知症高齢者日常生活自立度は参考情報ですが、それだけを理由に状態や原因を推測してはいけません。\n・書かれていない事実を創作しないでください。\n・「不明」「確認できない」「記録なし」は有効な情報です。\n・第三者が読んでも分かる、客観的で簡潔な事故報告書の文章にしてください。\n・情報を単純な短文の羅列にせず、時系列や前後関係が自然につながる文章にしてください。\n・「その際」「その後」などの接続表現は、実際の関係が確認できる場合だけ使用してください。\n・同じ表現の繰り返しを避けてください。\n\n【後の原因分析を見据えた情報収集】\n・①発生時状況、②発生時の対応、③利用者の状況では、単に文章を整えるだけでなく、④事故の原因分析に必要となる重要な事実が不足していないか確認してください。\n・不足がある場合だけ質問してください。質問は原因を推測するためではなく、原因分析の材料となる事実を確認するために行ってください。\n・①～③で原因を断定したり、原因や責任を決めつけたりしてはいけません。\n・④事故の原因分析では、①～③の内容を必ず確認し、原因分析に必要な事実が不足していれば質問してください。情報が揃ったら、確認できた事実と分析・可能性を分けて整理してください。\n\n【質問について】\n${questionAllowed ? `roundが0の場合、今回の段階で本当に不足している情報を点検してください。①～③では④の原因分析に必要な重要事実が不足している場合だけ質問してください。④では①～③を確認したうえで、原因分析を行うために必要な事実が不足している場合だけ質問してください。情報が十分なら質問は0個にしてください。不足がある場合だけ、本当に必要な質問を必要な数だけ作成してください。質問数に固定の下限・目標はありません。情報不足が多い場合は最大10問まで作成して構いませんが、10問にするために不要な質問を追加してはいけません。質問は重要度の高いものから並べてください。roundが1の場合は、重大な不足がない限り追加質問をせず、文章を作成してください。「不明」「確認できない」「記録なし」と回答できる内容について、無理に回答を求める質問にしないでください。選択肢を作り、allow_textがtrueの場合は選択肢に「その他」を入れず、自由入力欄だけを用意してください。` : `質問は行わず、与えられた情報から整理案を作成してください。`}\n\n【原因・再発防止について】\n${stage === "cause" ? "原因分析はAIによる整理案です。①～③の確定内容を材料にし、本人・職員・環境の要因を、確認できた事実と分析・可能性に分けて表現してください。原因を断定せず、最終判断は職員・管理者が行います。" : ""}\n${stage === "prevention" ? "再発防止策はAIによる案です。確定した原因分析と確定内容に沿って、具体的で実行可能な案にしてください。施設側の最終判断が必要な事項は断定しないでください。" : ""}\n\n【出力形式】\n${questionAllowed ? `roundが0で情報不足がある場合はJSONだけを返してください：\n{\"questions\":[{\"question\":\"質問文\",\"options\":[\"選択肢1\",\"選択肢2\"],\"allow_text\":true}]}\n情報が十分、またはroundが1の場合はJSONだけを返してください：\n{\"questions\":[],\"draft\":\"${info.title}の自然な文章\"}` : `JSONだけを返してください：\n{\"questions\":[],\"draft\":\"${info.title}の整理案\"}`}\n\n事故報告書の情報：\n${reportText}`;
 
-        const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "x-goog-api-key": env.GEMINI_API_KEY },
-          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.2, maxOutputTokens: 3000 } })
+        const geminiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent";
+        const geminiBody = JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.2, maxOutputTokens: 3000 }
         });
-        const data = await response.json();
+
+        // Gemini側の一時的な503（過負荷）だけを対象に、指数バックオフで最大3回再試行する。
+        // 503以外のエラーはその場で返し、不要な再送をしない。
+        let response;
+        let data;
+        const retryDelays = [2000, 4000, 8000];
+
+        for (let attempt = 0; attempt <= retryDelays.length; attempt++) {
+          response = await fetch(geminiUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "x-goog-api-key": env.GEMINI_API_KEY },
+            body: geminiBody
+          });
+
+          data = await response.json();
+
+          if (response.ok || response.status !== 503 || attempt === retryDelays.length) break;
+
+          await new Promise((resolve) => setTimeout(resolve, retryDelays[attempt]));
+        }
+
         if (!response.ok) return Response.json({ success: false, error: data?.error?.message || "Gemini API request failed" }, { status: response.status });
         const text = data?.candidates?.[0]?.content?.parts?.map((part) => part.text || "").join("").trim();
         if (!text) return Response.json({ success: false, error: "Geminiから回答を取得できませんでした" }, { status: 502 });
