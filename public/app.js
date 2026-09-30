@@ -181,19 +181,72 @@ function renderReadOnlyFields(container, items) {
 }
 
 function loadSavedProgress(key){if(!key)return{};try{const saved=JSON.parse(localStorage.getItem(key)||"{}");return saved&&typeof saved==="object"?saved:{};}catch{return{};}}
-function updateStageStartControls(){aiCheck.hidden=false;aiCheck.disabled=false;aiCheck.textContent="🤖 ①〜⑤をまとめて整理する";}
+function updateStageStartControls(){aiCheck.hidden=false;aiCheck.disabled=false;aiCheck.textContent="🤖 5項目をまとめて整理する";}
 aiCheck.addEventListener("click",()=>{if(isAiProcessing)return;startAllStages();});
 function startAllStages(){questionArea.innerHTML="";aiResult.textContent="AIが①〜⑤の不足情報を確認中…";isAiProcessing=true;aiAbortController=new AbortController();aiCheck.disabled=true;requestAiAll(0,[]);}
 function requestAiAll(round,answers){
   aiResult.textContent=round===0?"AIが①〜⑤の不足情報を確認中…":"AIが①〜⑤の文章を作成中…";
-  fetch("/api/ai-check",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({selected:latestSelected,texts:latestTexts,answers:answers,confirmed:confirmedSections,stage:"all",round:round}),signal:aiAbortController?.signal}).then(async r=>{const b=await r.json();if(!r.ok||!b.success)throw new Error(b.error||"AI処理に失敗しました");return b;}).then(b=>{isAiProcessing=false;aiAbortController=null;aiCheck.disabled=false;aiCheck.textContent="🤖 ①〜⑤をまとめて整理する";if(b.questions?.length){renderAllQuestions(b.questions);aiResult.textContent="不足している内容だけ回答してください。";}else{renderAllDrafts(b.drafts||{});aiResult.textContent="①〜⑤の文章を作成しました。内容を確認してください。";}}).catch(err=>{if(err.name==="AbortError")return;isAiProcessing=false;aiAbortController=null;aiCheck.disabled=false;aiResult.textContent="AI処理エラー："+err.message;const b=document.createElement("button");b.textContent="もう一度確認する";b.onclick=startAllStages;aiResult.appendChild(document.createElement("br"));aiResult.appendChild(b);});
+  fetch("/api/ai-check",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({selected:latestSelected,texts:latestTexts,answers:answers,confirmed:confirmedSections,stage:"all",round:round}),signal:aiAbortController?.signal}).then(async r=>{const b=await r.json();if(!r.ok||!b.success)throw new Error(b.error||"AI処理に失敗しました");return b;}).then(b=>{isAiProcessing=false;aiAbortController=null;aiCheck.disabled=false;aiCheck.textContent="🤖 5項目をまとめて整理する";if(b.questions?.length){renderAllQuestions(b.questions);aiResult.textContent="不足している内容だけ回答してください。";}else{renderAllDrafts(b.drafts||{});aiResult.textContent="①〜⑤の文章を作成しました。内容を確認してください。";}}).catch(err=>{if(err.name==="AbortError")return;isAiProcessing=false;aiAbortController=null;aiCheck.disabled=false;aiResult.textContent="AI処理エラー："+err.message;const b=document.createElement("button");b.textContent="もう一度確認する";b.onclick=startAllStages;aiResult.appendChild(document.createElement("br"));aiResult.appendChild(b);});
 }
 function renderAllQuestions(questions){
-  questionArea.innerHTML="";const h=document.createElement("h3");h.textContent="確認質問（"+questions.length+"問）";questionArea.appendChild(h);
-  questions.forEach((q,i)=>{const c=document.createElement("div");c.className="question-card";if(q.stage_label){const st=document.createElement("p");st.textContent="【"+q.stage_label+"】";c.appendChild(st);}const p=document.createElement("p");p.textContent=(i+1)+". "+q.question;c.appendChild(p);
-    (Array.isArray(q.options)?q.options:[]).filter(o=>String(o).trim()!=="その他").forEach(o=>{const l=document.createElement("label"),x=document.createElement("input");x.type="radio";x.name="allq-"+i;x.value=o;l.append(x," "+o);c.appendChild(l);});
-    if(q.allow_text){const l=document.createElement("label"),x=document.createElement("input"),t=document.createElement("input");x.type="radio";x.name="allq-"+i;x.value="その他";t.type="text";t.className="question-other";t.placeholder="内容を入力";t.dataset.other="true";l.append(x," その他：",t);c.appendChild(l);}questionArea.appendChild(c);});
-  const submit=document.createElement("button");submit.textContent="回答して①〜⑤の文章を作成";submit.onclick=()=>{const answers=[];questionArea.querySelectorAll(".question-card").forEach((c,i)=>{const x=c.querySelector("input[name=\"allq-"+i+"\"]:checked"),o=c.querySelector("[data-other=\"true\"]");let v=x?.value||"";if(v==="その他"&&o?.value.trim())v="その他："+o.value.trim();answers.push({stage:questions[i].stage,stage_label:questions[i].stage_label,question:questions[i].question,answer:v});});if(answers.some(x=>!x.answer)){aiResult.textContent="未回答の質問があります。必要な質問に回答してください。";return;}aiCheck.disabled=true;isAiProcessing=true;aiAbortController=new AbortController();requestAiAll(1,answers);};questionArea.appendChild(submit);
+  questionArea.innerHTML="";
+  const h=document.createElement("h3");
+  h.textContent="確認質問（"+questions.length+"問）";
+  questionArea.appendChild(h);
+  questions.forEach((q,i)=>{
+    const c=document.createElement("div");
+    c.className="question-card";
+    if(q.stage_label){
+      const st=document.createElement("p");
+      st.textContent="【"+q.stage_label+"】";
+      c.appendChild(st);
+    }
+    const p=document.createElement("p");
+    p.textContent=(i+1)+". "+q.question;
+    c.appendChild(p);
+    const type=q.type==="multi"?"checkbox":"radio";
+    const name="allq-"+i;
+    (Array.isArray(q.options)?q.options:[]).filter(o=>String(o).trim()!=="その他").forEach(o=>{
+      const l=document.createElement("label"),x=document.createElement("input");
+      x.type=type;x.name=name;x.value=o;
+      l.append(x," "+o);
+      c.appendChild(l);
+    });
+    if(q.allow_text){
+      const l=document.createElement("label"),x=document.createElement("input"),t=document.createElement("input");
+      x.type=type;x.name=name;x.value="その他";
+      t.type="text";t.className="question-other";t.placeholder="内容を入力";t.dataset.other="true";
+      l.append(x," その他：",t);
+      c.appendChild(l);
+    }
+    questionArea.appendChild(c);
+  });
+  const submit=document.createElement("button");
+  submit.textContent="回答して5項目の文章を作成";
+  submit.onclick=()=>{
+    const answers=[];
+    questionArea.querySelectorAll(".question-card").forEach((c,i)=>{
+      const inputs=[...c.querySelectorAll("input[name=\\"allq-"+i+"\\"]:checked")];
+      const other=c.querySelector("[data-other=\\"true\\"]");
+      let values=inputs.map(x=>x.value);
+      if(values.includes("その他")&&other?.value.trim()) values=values.map(v=>v==="その他"?"その他："+other.value.trim():v);
+      answers.push({
+        stage:questions[i].stage,
+        stage_label:questions[i].stage_label,
+        question:questions[i].question,
+        answer:values.join("、")
+      });
+    });
+    if(answers.some(x=>!x.answer)){
+      aiResult.textContent="未回答の質問があります。必要な質問に回答してください。";
+      return;
+    }
+    aiCheck.disabled=true;
+    isAiProcessing=true;
+    aiAbortController=new AbortController();
+    requestAiAll(1,answers);
+  };
+  questionArea.appendChild(submit);
 }
 function renderAllDrafts(drafts){
   questionArea.innerHTML="";const labels=["① 発生時状況、事故内容の詳細","② 発生時の対応","③ 利用者の状況","④ 事故の原因分析","⑤ 再発防止策"];
