@@ -1,6 +1,7 @@
 const form = document.getElementById("reportForm");
 const result = document.getElementById("result");
 const excelFile = document.getElementById("excelFile");
+const excelFileLabel = document.getElementById("excelFileLabel");
 const fileName = document.getElementById("selectedFileName");
 const readExcel = document.getElementById("readExcel");
 const excelResult = document.getElementById("excelResult");
@@ -35,6 +36,8 @@ let isAiProcessing = false;
 let currentStageBlock = null;
 let originalWorkbook = null;
 let originalFileName = "";
+
+excelFileLabel.addEventListener("click", () => excelFile.click());
 
 excelFile.addEventListener("change", () => {
   const file = excelFile.files[0];
