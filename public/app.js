@@ -180,6 +180,8 @@ function renderReadOnlyFields(container, items) {
   });
 }
 
+function loadSavedProgress(key){if(!key)return{};try{const saved=JSON.parse(localStorage.getItem(key)||"{}");return saved&&typeof saved==="object"?saved:{};}catch{return{};}}
+function updateStageStartControls(){aiCheck.hidden=false;aiCheck.disabled=false;aiCheck.textContent="🤖 ①〜⑤をまとめて整理する";}
 aiCheck.addEventListener("click",()=>{if(isAiProcessing)return;startAllStages();});
 function startAllStages(){questionArea.innerHTML="";aiResult.textContent="AIが①〜⑤の不足情報を確認中…";isAiProcessing=true;aiAbortController=new AbortController();aiCheck.disabled=true;requestAiAll(0,[]);}
 function requestAiAll(round,answers){
