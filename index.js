@@ -27,7 +27,7 @@ export default {
           {key:"prevention",label:"⑤ 再発防止策",purpose:"原因分析を踏まえ実行可能な対策案を整理",points:["手順変更","環境変更","周知・教育","その他対応","担当・運用","評価時期・方法"]}
         ];
         const stageText=stages.map(s=>"【"+s.label+"】\n目的："+s.purpose+"\n確認観点：\n"+s.points.map((p,i)=>(i+1)+". "+p).join("\n")).join("\n\n");
-        const rule=round===0?"①〜⑤を一度に点検し、本当に不足している重要情報だけを質問する。①〜③では④の原因分析に必要な事実も確認する。④では①〜③を踏まえる。⑤では原因分析と確定内容を踏まえる。情報が十分なら質問0個。最大10問。不要な質問は作らない。「不明」「確認できない」「記録なし」で回答できる内容を無理に回答させない。":"今回の回答を反映し、追加質問は原則0個として①〜⑤の文章を作成する。";
+        const rule=round===0?"①〜⑤を一度に点検し、事故報告として内容が具体的に伝わるように質問する。質問は最低5問、最大20問とする。Excelに既にある情報は重複して聞かない。①発生時の状況は特に具体化し、事故直前の行動、利用者の状態、職員の位置・対応、環境、事故の瞬間、発見時の状況など、第三者が場面をイメージできる情報を優先する。②③では対応と事故後の状態を具体化し、④の原因分析に必要な事実も確認する。④では①〜③を踏まえる。⑤では原因分析と確定内容を踏まえる。単純な一択だけでなく、複数の項目が同時に当てはまる場合はtype=multiの複数選択式にする。選択肢は介護現場で答えやすい具体的な内容にする。自由記述は必要な補足だけallow_text=trueにする。「不明」「確認できない」「記録なし」で回答できる内容を無理に回答させない。":"今回の回答を反映し、追加質問は原則0個として①〜⑤の文章を作成する。";
         const prompt="あなたは介護施設の事故報告書を整理する補助AIです。①〜⑤を一連の事故報告として扱います。\n\n"+stageText+"\n\n【重要ルール】\n・Excelの記載内容、今回の回答、確定内容だけを材料にする。\n・書かれていない事実を創作しない。\n・要介護度や認知症高齢者日常生活自立度だけで推測しない。\n・客観的で簡潔な文章にする。\n・②では家族への報告や上司への報告を記入・質問対象にしない。\n・④は事実と分析・可能性を分け、原因や責任を断定しない。\n・⑤の最終判断は職員・管理者が行う。\n・個人を直接特定できる情報を出力しない。\n\n【質問】\n"+rule+"\n\n【出力】\nround=0で不足がある場合はJSONだけで {\"questions\":[{\"stage\":\"incident_detail\",\"stage_label\":\"① 発生時状況、事故内容の詳細\",\"question\":\"質問文\",\"options\":[\"選択肢1\",\"選択肢2\"],\"allow_text\":true}]}\n情報が十分、またはround=1の場合はJSONだけで {\"questions\":[],\"drafts\":{\"① 発生時状況、事故内容の詳細\":\"文章\",\"② 発生時の対応\":\"文章\",\"③ 利用者の状況\":\"文章\",\"④ 事故の原因分析\":\"文章\",\"⑤ 再発防止策\":\"文章\"}}\n\n事故報告書の情報：\n"+reportText;
         const url="https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent";
         const payload=JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{temperature:0.2,maxOutputTokens:5000}});
@@ -36,7 +36,7 @@ export default {
         if(!response.ok)return Response.json({success:false,error:data?.error?.message||"Gemini API request failed"},{status:response.status});
         const text=data?.candidates?.[0]?.content?.parts?.map(p=>p.text||"").join("").trim();if(!text)return Response.json({success:false,error:"Geminiから回答を取得できませんでした"},{status:502});
         let parsed;try{parsed=JSON.parse(text.replace(/^[`]{3}json\s*/i,"").replace(/\s*[`]{3}$/,"").trim());}catch{return Response.json({success:false,error:"GeminiのJSON形式を解析できませんでした"},{status:502});}
-        return Response.json({success:true,questions:Array.isArray(parsed.questions)?parsed.questions.slice(0,10):[],drafts:parsed.drafts&&typeof parsed.drafts==="object"?parsed.drafts:{}});
+        return Response.json({success:true,questions:Array.isArray(parsed.questions)?parsed.questions.slice(0,20):[],drafts:parsed.drafts&&typeof parsed.drafts==="object"?parsed.drafts:{}});
       } catch(error) { return Response.json({success:false,error:error.message},{status:500}); }
     }
     if (url.pathname === "/api/reports" && request.method === "POST") {
