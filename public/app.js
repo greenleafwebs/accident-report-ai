@@ -37,7 +37,12 @@ let currentStageBlock = null;
 let originalWorkbook = null;
 let originalFileName = "";
 
-if (excelFileLabel && excelFile) {\n  excelFileLabel.addEventListener("click", (event) => {\n    event.preventDefault();\n    excelFile.click();\n  });\n}
+if (excelFileLabel && excelFile) {
+  excelFileLabel.addEventListener("click", (event) => {
+    event.preventDefault();
+    excelFile.click();
+  });
+}
 
 excelFile.addEventListener("change", () => {
   const file = excelFile.files[0];
@@ -132,7 +137,8 @@ function getCheckedValues(row, fieldColumn) {
   return [...new Set(values)];
 }
 
-function normalizeSelectedValue(value) { return String(value ?? "").replace(/[\r\n]+/g, " ").replace(/\s+/g, " ").trim(); }
+function normalizeSelectedValue(value) { return String(value ?? "").replace(/[\r
+]+/g, " ").replace(/\s+/g, " ").trim(); }
 function getTextValue(row, fieldColumn, fieldName) {
   const values = [];
   for (let index = fieldColumn + 1; index < row.length; index++) {
@@ -229,8 +235,8 @@ function renderAllQuestions(questions){
   submit.onclick=()=>{
     const answers=[];
     questionArea.querySelectorAll(".question-card").forEach((c,i)=>{
-      const inputs=[...c.querySelectorAll("input[name=\\"allq-"+i+"\\"]:checked")];
-      const other=c.querySelector("[data-other=\\"true\\"]");
+      const inputs=[...c.querySelectorAll("input[name=\"allq-"+i+"\"]:checked")];
+      const other=c.querySelector("[data-other=\"true\"]");
       let values=inputs.map(x=>x.value);
       if(values.includes("その他")&&other?.value.trim()) values=values.map(v=>v==="その他"?"その他："+other.value.trim():v);
       answers.push({
