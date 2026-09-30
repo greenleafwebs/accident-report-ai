@@ -37,7 +37,7 @@ let currentStageBlock = null;
 let originalWorkbook = null;
 let originalFileName = "";
 
-excelFileLabel.addEventListener("click", () => excelFile.click());
+if (excelFileLabel && excelFile) {\n  excelFileLabel.addEventListener("click", (event) => {\n    event.preventDefault();\n    excelFile.click();\n  });\n}
 
 excelFile.addEventListener("change", () => {
   const file = excelFile.files[0];
