@@ -137,8 +137,7 @@ function getCheckedValues(row, fieldColumn) {
   return [...new Set(values)];
 }
 
-function normalizeSelectedValue(value) { return String(value ?? "").replace(/[\r
-]+/g, " ").replace(/\s+/g, " ").trim(); }
+function normalizeSelectedValue(value) { return String(value ?? "").replace(/[\r\n]+/g, " ").replace(/\s+/g, " ").trim(); }
 function getTextValue(row, fieldColumn, fieldName) {
   const values = [];
   for (let index = fieldColumn + 1; index < row.length; index++) {
