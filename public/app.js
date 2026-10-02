@@ -272,7 +272,7 @@ async function downloadCompletedExcel(){
   const labels=["① 発生時状況、事故内容の詳細","② 発生時の対応","③ 利用者の状況","④ 事故の原因分析","⑤ 再発防止策"];
   if(!originalFileBuffer){aiResult.textContent="元のExcelファイルが見つかりません。もう一度Excelを読み込んでください。";return;}
   if(!labels.every(label=>Object.prototype.hasOwnProperty.call(confirmedSections,label))){aiResult.textContent="①〜⑤すべての内容を「これでOK」または「手動で訂正」してからダウンロードしてください。";return;}
-  const targets={"① 発生時状況、事故内容の詳細":"D29","② 発生時の対応":"D29","③ 利用者の状況":"D38","④ 事故の原因分析":"E44","⑤ 再発防止策":"E46"};
+  const targets={"① 発生時状況、事故内容の詳細":"E27","② 発生時の対応":"D29","③ 利用者の状況":"D38","④ 事故の原因分析":"E43","⑤ 再発防止策":"E45"};
   try {
     const zip = await JSZip.loadAsync(originalFileBuffer);
     const sheetPath = "xl/worksheets/sheet1.xml";
