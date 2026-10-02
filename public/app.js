@@ -272,27 +272,37 @@ async function downloadCompletedExcel(){
   const labels=["① 発生時状況、事故内容の詳細","② 発生時の対応","③ 利用者の状況","④ 事故の原因分析","⑤ 再発防止策"];
   if(!originalFileBuffer){aiResult.textContent="元のExcelファイルが見つかりません。もう一度Excelを読み込んでください。";return;}
   if(!labels.every(label=>Object.prototype.hasOwnProperty.call(confirmedSections,label))){aiResult.textContent="①〜⑤すべての内容を「これでOK」または「手動で訂正」してからダウンロードしてください。";return;}
-  const targets={"① 発生時状況、事故内容の詳細":"D29","② 発生時の対応":"D31","③ 利用者の状況":"D38","④ 事故の原因分析":"E44","⑤ 再発防止策":"E46"};
+  const targets={"① 発生時状況、事故内容の詳細":"D29","② 発生時の対応":"D29","③ 利用者の状況":"D38","④ 事故の原因分析":"E44","⑤ 再発防止策":"E46"};
   try {
-    const workbook = await XlsxPopulate.fromDataAsync(originalFileBuffer);
-    const sheet = workbook.sheet("事故報告");
-    if(!sheet) throw new Error("「事故報告」シートが見つかりません。");
-    Object.entries(targets).forEach(([label,address])=>{
-      const value=String(confirmedSections[label]??"").trim();
-      sheet.cell(address).value(value);
+    const zip = await JSZip.loadAsync(originalFileBuffer);
+    const sheetPath = "xl/worksheets/sheet1.xml";
+    const sheetXml = await zip.file(sheetPath).async("string");
+    const escapeXml = (value) => String(value ?? "")
+      .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+      .replace(/"/g,"&quot;").replace(/'/g,"&apos;");
+    let updatedXml = sheetXml;
+    Object.entries(targets).forEach(([label,address]) => {
+      const value = escapeXml(String(confirmedSections[label] ?? "").trim());
+      const pattern = new RegExp('<c\\b([^>]*\\br="' + address + '"[^>]*)>([\\s\\S]*?)</c>|<c\\b([^>]*\\br="' + address + '"[^>]*)\\/>');
+      if(!pattern.test(updatedXml)) throw new Error(address+"セルが見つかりません。");
+      updatedXml = updatedXml.replace(pattern, (match, attrs1, inner, attrs2) => {
+        const attrs = attrs1 || attrs2;
+        const cleanAttrs = attrs.replace(/\\s+t="[^"]*"/g,"");
+        return '<c' + cleanAttrs + ' t="inlineStr"><is><t xml:space="preserve">' + value + '</t></is></c>';
+      });
     });
-    const output = await workbook.outputAsync();
-    const blob = new Blob([output], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-    const url = URL.createObjectURL(blob);
+    zip.file(sheetPath, updatedXml);
+    const output = await zip.generateAsync({type:"blob",compression:"DEFLATE"});
+    const url = URL.createObjectURL(output);
     const link = document.createElement("a");
-    const baseName=originalFileName.replace(/\.[^.]+$/,"")||"事故報告書";
+    const baseName=originalFileName.replace(/\\.[^.]+$/,"")||"事故報告書";
     link.href=url;
     link.download=baseName+"_完成版.xlsx";
     document.body.appendChild(link);
     link.click();
     link.remove();
     URL.revokeObjectURL(url);
-    aiResult.textContent="完成版Excelをダウンロードしました。元ファイルをベースに①〜⑤を書き込んでいます。行の高さや印刷範囲などは必要に応じてExcel側で調整してください。";
+    aiResult.textContent="完成版Excelをダウンロードしました。元ファイルの書式を維持したまま、①〜⑤を書き込んでいます。";
   } catch(error) {
     aiResult.textContent="Excel書き戻しエラー："+error.message;
   }
