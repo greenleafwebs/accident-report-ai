@@ -35,6 +35,7 @@ let aiAbortController = null;
 let isAiProcessing = false;
 let currentStageBlock = null;
 let originalWorkbook = null;
+let originalFileBuffer = null;
 let originalFileName = "";
 
 if (excelFileLabel && excelFile) {
@@ -71,6 +72,7 @@ readExcel.addEventListener("click", async () => {
     const buffer = await file.arrayBuffer();
     const workbook = XLSX.read(buffer, { type: "array", cellStyles: true });
     originalWorkbook = workbook;
+    originalFileBuffer = buffer;
     originalFileName = file.name;
     const selected = [];
     const texts = [];
@@ -266,23 +268,34 @@ function renderAllDrafts(drafts){
 }
 function showDownloadButton(){const labels=["① 発生時状況、事故内容の詳細","② 発生時の対応","③ 利用者の状況","④ 事故の原因分析","⑤ 再発防止策"];const all=labels.every(x=>Object.prototype.hasOwnProperty.call(confirmedSections,x));aiResult.innerHTML="";const p=document.createElement("p");p.textContent=all?"①〜⑤の確認が完了しました。":"各項目の内容を確認して「これでOK」または「手動で訂正」を行ってください。";aiResult.appendChild(p);if(all){const b=document.createElement("button");b.textContent="📥 完成したExcelをダウンロード";b.onclick=downloadCompletedExcel;aiResult.appendChild(b);}}
 function saveProgress(){if(!reportStorageKey)return;try{localStorage.setItem(reportStorageKey,JSON.stringify({confirmedSections}));}catch{}}
-function downloadCompletedExcel(){
+async function downloadCompletedExcel(){
   const labels=["① 発生時状況、事故内容の詳細","② 発生時の対応","③ 利用者の状況","④ 事故の原因分析","⑤ 再発防止策"];
-  if(!originalWorkbook){aiResult.textContent="元のExcelファイルが見つかりません。もう一度Excelを読み込んでください。";return;}
-  const sheet=originalWorkbook.Sheets["事故報告"];
-  if(!sheet){aiResult.textContent="「事故報告」シートが見つかりません。";return;}
+  if(!originalFileBuffer){aiResult.textContent="元のExcelファイルが見つかりません。もう一度Excelを読み込んでください。";return;}
   if(!labels.every(label=>Object.prototype.hasOwnProperty.call(confirmedSections,label))){aiResult.textContent="①〜⑤すべての内容を「これでOK」または「手動で訂正」してからダウンロードしてください。";return;}
   const targets={"① 発生時状況、事故内容の詳細":"D29","② 発生時の対応":"D31","③ 利用者の状況":"D38","④ 事故の原因分析":"E44","⑤ 再発防止策":"E46"};
-  Object.entries(targets).forEach(([label,address])=>{
-    const value=String(confirmedSections[label]??"").trim();
-    const existing=sheet[address]||{};
-    sheet[address]={...existing,t:"s",v:value};
-    delete sheet[address].f;
-    delete sheet[address].w;
-  });
-  const baseName=originalFileName.replace(/\.[^.]+$/,"")||"事故報告書";
-  XLSX.writeFile(originalWorkbook,baseName+"_完成版.xlsx",{bookType:"xlsx"});
-  aiResult.textContent="完成版Excelをダウンロードしました。①〜⑤を元の書式へ入力済みです。行の高さや印刷範囲などは必要に応じてExcel側で調整してください。";
+  try {
+    const workbook = await XlsxPopulate.fromDataAsync(originalFileBuffer);
+    const sheet = workbook.sheet("事故報告");
+    if(!sheet) throw new Error("「事故報告」シートが見つかりません。");
+    Object.entries(targets).forEach(([label,address])=>{
+      const value=String(confirmedSections[label]??"").trim();
+      sheet.cell(address).value(value);
+    });
+    const output = await workbook.outputAsync();
+    const blob = new Blob([output], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const baseName=originalFileName.replace(/\.[^.]+$/,"")||"事故報告書";
+    link.href=url;
+    link.download=baseName+"_完成版.xlsx";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    aiResult.textContent="完成版Excelをダウンロードしました。元ファイルをベースに①〜⑤を書き込んでいます。行の高さや印刷範囲などは必要に応じてExcel側で調整してください。";
+  } catch(error) {
+    aiResult.textContent="Excel書き戻しエラー："+error.message;
+  }
 }
 
 if (form) {
