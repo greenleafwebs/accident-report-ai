@@ -214,20 +214,50 @@ function renderAllQuestions(questions){
     const p=document.createElement("p");
     p.textContent=(i+1)+". "+q.question;
     c.appendChild(p);
-    const type=q.type==="multi"?"checkbox":"radio";
     const name="allq-"+i;
-    (Array.isArray(q.options)?q.options:[]).filter(o=>String(o).trim()!=="その他").forEach(o=>{
-      const l=document.createElement("label"),x=document.createElement("input");
-      x.type=type;x.name=name;x.value=o;
-      l.append(x," "+o);
-      c.appendChild(l);
-    });
-    if(q.allow_text){
-      const l=document.createElement("label"),x=document.createElement("input"),t=document.createElement("input");
-      x.type=type;x.name=name;x.value="その他";
-      t.type="text";t.className="question-other";t.placeholder="内容を入力";t.dataset.other="true";
-      l.append(x," その他：",t);
-      c.appendChild(l);
+    const options=(Array.isArray(q.options)?q.options:[]).filter(o=>String(o).trim()!=="その他");
+    if(q.type==="multi"){
+      options.forEach(o=>{
+        const l=document.createElement("label"),x=document.createElement("input");
+        x.type="checkbox";x.name=name;x.value=o;
+        l.append(x," "+o);
+        c.appendChild(l);
+      });
+      if(q.allow_text){
+        const l=document.createElement("label"),x=document.createElement("input"),t=document.createElement("input");
+        x.type="checkbox";x.name=name;x.value="その他";
+        t.type="text";t.className="question-other";t.placeholder="内容を入力";t.dataset.other="true";
+        l.append(x," その他：",t);
+        c.appendChild(l);
+      }
+    }else{
+      const select=document.createElement("select");
+      select.name=name;
+      select.className="question-select";
+      const placeholder=document.createElement("option");
+      placeholder.value="";
+      placeholder.textContent="選択してください";
+      placeholder.disabled=true;
+      placeholder.selected=true;
+      select.appendChild(placeholder);
+      options.forEach(o=>{
+        const option=document.createElement("option");
+        option.value=o;
+        option.textContent=o;
+        select.appendChild(option);
+      });
+      if(q.allow_text){
+        const option=document.createElement("option");
+        option.value="その他";
+        option.textContent="その他";
+        select.appendChild(option);
+      }
+      c.appendChild(select);
+      if(q.allow_text){
+        const t=document.createElement("input");
+        t.type="text";t.className="question-other";t.placeholder="「その他」を選んだ場合に入力";t.dataset.other="true";
+        c.appendChild(t);
+      }
     }
     questionArea.appendChild(c);
   });
@@ -236,9 +266,10 @@ function renderAllQuestions(questions){
   submit.onclick=()=>{
     const answers=[];
     questionArea.querySelectorAll(".question-card").forEach((c,i)=>{
+      const select=c.querySelector("select[name=\"allq-"+i+"\"]");
       const inputs=[...c.querySelectorAll("input[name=\"allq-"+i+"\"]:checked")];
       const other=c.querySelector("[data-other=\"true\"]");
-      let values=inputs.map(x=>x.value);
+      let values=select ? (select.value ? [select.value] : []) : inputs.map(x=>x.value);
       if(values.includes("その他")&&other?.value.trim()) values=values.map(v=>v==="その他"?"その他："+other.value.trim():v);
       answers.push({
         stage:questions[i].stage,
