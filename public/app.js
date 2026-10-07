@@ -308,7 +308,15 @@ async function downloadCompletedExcel(){
     const zip = await JSZip.loadAsync(originalFileBuffer);
     const sheetPath = "xl/worksheets/sheet1.xml";
     const sheetXml = await zip.file(sheetPath).async("string");
-    const escapeXml = (value) => String(value ?? "")
+    const escapeXml = (value) => [...String(value ?? "")]
+      .filter((char) => {
+        const code = char.codePointAt(0);
+        return code === 0x9 || code === 0xA || code === 0xD ||
+          (code >= 0x20 && code <= 0xD7FF) ||
+          (code >= 0xE000 && code <= 0xFFFD) ||
+          (code >= 0x10000 && code <= 0x10FFFF);
+      })
+      .join("")
       .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
       .replace(/"/g,"&quot;").replace(/'/g,"&apos;");
     let updatedXml = sheetXml;
@@ -318,7 +326,7 @@ async function downloadCompletedExcel(){
       if(!pattern.test(updatedXml)) throw new Error(address+"セルが見つかりません。");
       updatedXml = updatedXml.replace(pattern, (match, attrs1, inner, attrs2) => {
         const attrs = attrs1 || attrs2;
-        const cleanAttrs = attrs.replace(/\\s+t="[^"]*"/g,"");
+        const cleanAttrs = attrs.replace(/\s+t="[^"]*"/g,"");
         return '<c' + cleanAttrs + ' t="inlineStr"><is><t xml:space="preserve">' + value + '</t></is></c>';
       });
     });
@@ -326,7 +334,7 @@ async function downloadCompletedExcel(){
     const output = await zip.generateAsync({type:"blob",compression:"DEFLATE"});
     const url = URL.createObjectURL(output);
     const link = document.createElement("a");
-    const baseName=originalFileName.replace(/\\.[^.]+$/,"")||"事故報告書";
+    const baseName=originalFileName.replace(/\.[^.]+$/,"")||"事故報告書";
     link.href=url;
     link.download=baseName+"_完成版.xlsx";
     document.body.appendChild(link);
